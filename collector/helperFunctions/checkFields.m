@@ -1,6 +1,9 @@
 function options = checkFields(options,params,value,fieldname)
 % checkFields - checks whether fieldname exists in options, if not checks if it exists in params and sets this value; elseif value is used
-% 
+%
+% Syntax:
+%   options = checkFields(options,params,value,fieldname)
+%
 % Inputs:
 %   options   - [struct] options struct
 %   params    - [struct] holds params used for example in cross-validation 

@@ -1,6 +1,9 @@
 function B0_aug = getAugmentedImage(B0,p)
 % getAugmentedImage  - augments image to allow selection of patches from the scan-boundary
 %
+% Syntax:
+%   getAugmentedImage(B0,p)
+%
 % Inputs:
 %   B0 	   - [matrix] the B-Scan
 %   p      - [array](2) patch-size
@@ -16,7 +19,7 @@ function B0_aug = getAugmentedImage(B0,p)
 %
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
-% Website: https://github.com/octSegmentation/matlab-source-code
+% Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 05-Dec-2013
 
 [y x] = size(B0);

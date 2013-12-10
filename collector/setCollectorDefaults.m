@@ -91,9 +91,9 @@ end
 % which columns are part of the shape prior p(b) and are used for q_b (allows for sparse representations; intermediate columns are interpolated);
 % can be set for each region within the volume separately
 if ~isfield(options,'columnsShape') 
-	options.columnsShape = cell(1,1);
+	options.columnsShape = cell(1,options.numRegionsPerVolume);
 	for i = 1:options.numRegionsPerVolume
-		options.columnsShape{1}{i} = round(linspace(1,options.X,options.X/2));
+		options.columnsShape{i} = round(linspace(1,options.X,options.X/2));
 	end
 end
 % which columns are to be predicted, i.e. are used in q_c
@@ -109,5 +109,11 @@ if ~isfield(options,'ThreeD') options.ThreeD = 0; end
 % exist labels for the file, if true the collector collects ground trouth for later evaluation
 if ~isfield(options,'labels') options.labels = 1; end
 
+% the amount of information output
+if ~isfield(options,'verbose') options.verbose = 0; end
+
+% print Timings during prediction
+if ~isfield(options,'printTimings') options.printTimings = 0; end
 options.numLayers = length(options.LayersTrain);
+
 end

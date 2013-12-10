@@ -11,7 +11,7 @@ function models = trainAppearance(files,collector,params,options)
 %     .numRegionsPerVolume
 %     .numRegionsPerBScan
 %     .projToEigenspace
-%	  .numModesAppearance
+%     .numModesAppearance
 %   params    - [struct] holds params used for example in cross-validation 
 %   options   - [struct] holds options used within the appearance function
 %     .appearanceModel - [string] name of the function to call
@@ -26,8 +26,8 @@ function models = trainAppearance(files,collector,params,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 06-Dec-2013
 
-
 tstart = tic;
+% iterate over the regions of a volume; for 2-D B-Scans numRegionsPerVolume is 1
 for regionVolume = 1:collector.options.numRegionsPerVolume
 	% selects the IDs for the current region with the volume for all files for the collector
 	collector.options.labelIDsCurrent = collector.options.labelIDs(:,regionVolume);
@@ -65,6 +65,5 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 		end
 	end
 end
-fprintf('... trained appearance models in %.2f s ...\n',toc(tstart));
 
-
+printMessage(sprintf('... trained appearance models in %.2f s ...\n',toc(tstart)),1,collector.options.verbose);

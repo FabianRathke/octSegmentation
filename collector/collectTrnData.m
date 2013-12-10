@@ -44,9 +44,7 @@ helper = 1:options.Y;
 
 for i = 1:length(files)
 	[a filename] = fileparts(files(i).name);
-	if options.ThreeD
-		options.labelID = options.labelIDsCurrent(i);
-	end
+	options.labelID = options.labelIDsCurrent(i);
  	interpolation = loadLabels(filename,options);
 	for region = 1:size(options.BScanRegions,1)
 		% draw patches from within layers	

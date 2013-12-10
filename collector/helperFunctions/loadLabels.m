@@ -8,6 +8,7 @@ function interpolation = loadLabels(filename,options)
 %       .labelID     - [int] Spectralis B-Scans are labeled B0,B1,..., for each ID there exists a mat-file with labels
 %       .clip        - [boolean] indicates whether to clip a B-Scan at the left and right border
 %       .clipRange   - [array](2) defines the left and right border of the B-Scan after clipping 
+%       .verbose     - [int] level of verbosity
 %
 % Outputs:
 %   interpolation - [matrix] the segmented boundaries for the respective scan
@@ -19,14 +20,8 @@ function interpolation = loadLabels(filename,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 05-Dec-2013
 
-if isfield(options,'labelID')
-	load([options.folder_labels filename '_' num2str(options.labelID) '_coordinates.mat']);
-	if options.printInformation > 1
-		fprintf('Loaded Labels for %s and region %d\n',filename,options.labelID);
-	end
-else
-	load([options.folder_labels filename '_coordinates.mat']);
-end
+load([options.folder_labels filename '_' num2str(options.labelID) '_coordinates.mat']);
+printMessage(sprintf('Loaded labels for %s and region %d.\n',filename,options.labelID),2,options.verbose);
 
 if options.clip
 	interpolation = interpolation(:,options.clipRange(1):options.clipRange(2));

@@ -22,9 +22,7 @@ function B0 = loadData(filename,options)
 if isfield(options,'labelID')
    	load([options.folder_data filename '.mat'],sprintf('B%d',options.labelID));
    	eval(sprintf('B0 = B%d;',options.labelID));
-	if options.printInformation > 1
-		fprintf('Loaded data for %s and region %d\n',filename,options.labelID);
-	end
+	printMessage(sprintf('Loaded data for %s and region %d.\n',filename,options.labelID),2,options.verbose);
 else
    load([options.folder_data filename '.mat'],'B0');
 end  
