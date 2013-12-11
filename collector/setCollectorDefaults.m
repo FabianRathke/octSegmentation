@@ -107,7 +107,7 @@ if ~isfield(options,'patchPosition') options.patchPosition = 'random'; end
 if ~isfield(options,'ThreeD') options.ThreeD = 0; end
 
 % exist labels for the file, if true the collector collects ground trouth for later evaluation
-if ~isfield(options,'labels') options.labels = 1; end
+if ~isfield(options,'storeLabels') options.storeLabels = 1; end
 
 % the amount of information output
 if ~isfield(options,'verbose') options.verbose = 0; end
