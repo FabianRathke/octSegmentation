@@ -55,7 +55,7 @@ if options.loadShape
 	printMessage(sprintf('... loaded saved shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);
 else
 	% fetch the ground truth for files
-	[tmp mu Sigma] = extractShapeModel(files,collector);
+	[data mu Sigma] = extractShapeModel(files,collector);
 	printMessage(sprintf('... train shape prior model (can take several minutes) ... \n'),1,collector.options.verbose);
 	tic;
 	% ******* PPCA *********, see Tipping et al, 1999

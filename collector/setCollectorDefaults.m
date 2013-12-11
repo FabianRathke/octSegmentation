@@ -5,6 +5,9 @@ function options = setCollectorDefaults(options,params,files)
 %
 % Syntax:	
 %   options = setCollectorDefaults(options,params,files)
+%     .testFullImage
+%     .width
+%     .height
 %
 % Inputs:
 %   options - [struct] options struct
@@ -38,7 +41,7 @@ if ~isfield(options,'projToEigenspace') options.projToEigenspace = true; end
 if ~isfield(options,'numModesAppearance') options.numModesAppearance = 20; end
 
 % fetches patches for the complete test scan; if false grabs only a subset 
-if ~isfield(options,'testFullImage') options.fullImage = true; end
+if ~isfield(options,'testFullImage') options.testFullImage = true; end
 
 % width and height of a B-Scan
 if ~isfield(options,'X')
@@ -116,4 +119,4 @@ if ~isfield(options,'verbose') options.verbose = 0; end
 if ~isfield(options,'printTimings') options.printTimings = 0; end
 options.numLayers = length(options.LayersTrain);
 
-end
+if ~isfield(options,'saveAppearanceTerms') options.saveAppearanceTerms = 0; end

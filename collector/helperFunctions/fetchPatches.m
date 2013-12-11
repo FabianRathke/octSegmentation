@@ -25,10 +25,6 @@ pw = ([options.height options.width]-1)/2;
 patchSize = options.width*options.height;
 B0 = loadData(filename,options);
 
-if options.labels
- 	interpolation = loadLabels(filename,options);
-	Classes = wrapperGetRaster(interpolation(options.EdgesTrain,:),[options.Y size(interpolation,2)]);
-end
 [Y X] = size(B0);
 
 % increase the scan to draw patches from the border

@@ -37,8 +37,8 @@ function output = predAppearance(files,collector,params,models,options)
 options = setDefaultAppearance(options);
 numClasses = length(models);
 
-output.prediction = cell(length(files),numVolRegions);
-output.trueLabels = cell(length(files),numVolRegions);
+output.prediction = cell(length(files),collector.options.numRegionsPerVolume);
+output.trueLabels = cell(length(files),collector.options.numRegionsPerVolume);
 
 tic;
 for i = 1:length(files)
@@ -50,7 +50,7 @@ for i = 1:length(files)
 			fprintf('Fetching patches: %.3f\n',timeFetchingPatches);
 		end
 
-		if collector.options.storeLabels
+		if collector.options.saveAppearanceTerms
 			output.trueLabels{i,regionVolume} = patches.classID;
 		end
 		% initialize results with the suitable data type; for GPU or CPU computations
