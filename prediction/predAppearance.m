@@ -47,7 +47,7 @@ for i = 1:length(files)
 		collector.options.labelID = collector.options.labelIDs(i,regionVolume);
 		a = tic; patches = collector.name(files(i),collector.options); timeFetchingPatches = toc(a); 
 		if collector.options.printTimings
-			fprintf('Fetching patches: %.3f\n',timeFetchingPatches);
+			fprintf('Fetching patches in %.2f\ns',timeFetchingPatches);
 		end
 
 		if collector.options.saveAppearanceTerms
@@ -94,7 +94,7 @@ for i = 1:length(files)
 end
 
 if collector.options.printTimings
-	fprintf('Predicted appearance in %.3f s\n',toc-timeFetchingPatches);
+	fprintf('Predicted appearance in %.3fs\n',toc-timeFetchingPatches);
 end
 
 end

@@ -71,9 +71,11 @@ if ~isfield(options,'addNoise') options.addNoise = 0; end
 if ~isfield(options,'calcOnGPU') options.calcOnGPU = 0; end
 % the datatype for those variables that are moved onto the GPU has to be variable
 if options.calcOnGPU
-	options.dataType = 'GPUSingle';
+	options.dataType = 'GPUsingle';
+	options.dataTypeCast = 'GPUsingle';
 else
 	options.dataType = '''double''';
+	options.dataTypeCast = 'double';
 end
 
 % most probably deprecated (05-12-2013)
@@ -113,7 +115,7 @@ if ~isfield(options,'ThreeD') options.ThreeD = 0; end
 if ~isfield(options,'storeLabels') options.storeLabels = 1; end
 
 % the amount of information output
-if ~isfield(options,'verbose') options.verbose = 0; end
+if ~isfield(options,'verbose') options.verbose = 1; end
 
 % print Timings during prediction
 if ~isfield(options,'printTimings') options.printTimings = 0; end
