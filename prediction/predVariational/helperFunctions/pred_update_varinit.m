@@ -18,7 +18,7 @@ for volRegion = 1:numVolRegions
 		idxMu(a,:) = idx_a(ones(1,numBounds),:);
 		idxProd(a) = idx_a;
 		idxProd2(a,:) = a(ones(1,numBounds),:);
-		Sigma_a_a_(a,:) = inv(eye(numBounds)*sigmaML^-1 - sigmaML^-1*WML(idx_a,:)*M*WML(idx_a,:)');
+		Sigma_a_a_(a,:) = inv(eye(numBounds)*sigmaML^-1 - sigmaML^-1*models.shapeModel.WML(idx_a,:)*models.shapeModel.M*models.shapeModel.WML(idx_a,:)');
 	end
 end
 

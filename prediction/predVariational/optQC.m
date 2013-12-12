@@ -14,7 +14,7 @@ c_c = eval(sprintf('%s(c_c)',collector.options.dataTypeCast));
 % call the c-function in case we need not to calculate pair
 timeCFunc = 0;
 if ~options.calcFuncVal
-	a = tic; q_cc = optQCMFC(condQB,prediction,Sigma_c.^-1,mu_c,c_c,mu_a_b2',numColumnsPred,numColumnsShape,columnsPredShapeVec(1,:),columnsPredShapeFactorVec(1,:),columnsPredShapeVec(2,:),columnsPredShapeFactorVec(2,:),factorsPrecAVec,hashTable); 
+	a = tic; q_cc = optQCMFC(double(condQB),prediction,double(Sigma_c.^-1),double(mu_c),double(c_c),double(mu_a_b2'),numColumnsPred,numColumnsShape,columnsPredShapeVec(1,:),columnsPredShapeFactorVec(1,:),columnsPredShapeVec(2,:),columnsPredShapeFactorVec(2,:),double(factorsPrecAVec),hashTable); 
 	q_c.singleton = permute(reshape(q_cc,[numRows,numBounds,numColumnsPred,numVolRegions]),[4,3,2,1]);
 	timeCFunc = toc(a);
 else

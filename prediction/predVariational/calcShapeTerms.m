@@ -21,7 +21,7 @@ for volRegion = 1:numVolRegions
 	
 		% calculating A_k^j: note that we do not need the sigma^-2I part, since we pull a part of K that does not include the diagonal
 		if collector.options.calcOnGPU
-			A_k(idx_j,idx_not_j) = GPUSingle(K_jj_inverse{volRegion,j})*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
+			A_k(idx_j,idx_not_j) = GPUsingle(K_jj_inverse{volRegion,j})*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
 		else
 			A_k(idx_j,idx_not_j) = K_jj_inverse{volRegion,j}*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
 		end

@@ -59,7 +59,7 @@ for volRegion = 1:numVolRegions
 	idxA = idxB + numColumnsShape(volRegion);
 	
 	for j = 1:length(idxB)
-		P = inv(WML([idxB(j) idxA(j)],:)*WML([idxB(j) idxA(j)],:)' + sigmaML*eye(2));
+		P = inv(models.shapeModel.WML([idxB(j) idxA(j)],:)*models.shapeModel.WML([idxB(j) idxA(j)],:)' + sigmaML*eye(2));
 		factorsPrecA{volRegion}(j) = P(2,2);
 		factorsPrecB{volRegion}(j) = P(2,1);
 	end
@@ -67,7 +67,6 @@ end
 
 factorsPrecAVec = [factorsPrecA{:}];
 factorsPrecBVec = [factorsPrecB{:}];
-factorsPrecAVec = eval(sprintf('%s(factorsPrecAVec)',collector.options.dataTypeCast));
 
 % for the c-sum-product
 hashTable = sort(exp(-10000:0.01:0),'descend');
@@ -89,6 +88,7 @@ idxB(idxNotB) = []; idxA(idxNotA) = [];
 A = 1:numRows;
 mu_a_b2 = (models.shapeModel.mu(idxB,ones(1,numRows)) - factorsPrecAVec(ones(1,numRows),:)'.^-1.*factorsPrecBVec(ones(1,numRows),:)'.*(A(ones(1,length(idxA)),:)-models.shapeModel.mu(idxA,ones(1,numRows))));
 mu_a_b2 =  eval(sprintf('%s(mu_a_b2)',collector.options.dataTypeCast));
+factorsPrecAVec = eval(sprintf('%s(factorsPrecAVec)',collector.options.dataTypeCast));
 
 % auslagerung calcOT
 X = 1:numRows;
