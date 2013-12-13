@@ -55,7 +55,13 @@ if ~isfield(options,'Y') options.Y = 496; end
 
 options.numFiles = length(files);
 % the number of regions per file/volume, 1 ==  2-D Scan, > 1 == 3-D Volume
-if ~isfield(options,'numRegionsPerVolume') options.numRegionsPerVolume = 1; end
+if ~isfield(options,'numRegionsPerVolume') 
+	if ~isfield(options,'labelIDs')
+		options.numRegionsPerVolume = 1;
+	else
+		options.numRegionsPerVolume = size(options.labelIDs,2);
+	end
+end
 % indicates how single scans of a volume are to be identified (are then used in functions loadLabels and loadData)
 if ~isfield(options,'labelIDs') options.labelIDs = zeros(options.numFiles,options.numRegionsPerVolume); end
 
@@ -122,3 +128,5 @@ if ~isfield(options,'printTimings') options.printTimings = 0; end
 options.numLayers = length(options.LayersTrain);
 
 if ~isfield(options,'saveAppearanceTerms') options.saveAppearanceTerms = 0; end
+
+if ~isfield(options,'dataset') options.dataset = 'spectralis'; end

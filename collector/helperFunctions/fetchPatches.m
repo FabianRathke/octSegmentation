@@ -28,7 +28,7 @@ B0 = loadData(filename,options);
 [Y X] = size(B0);
 
 % increase the scan to draw patches from the border
-B0Aug = sqrt(sqrt(getAugmentedImage(B0,[options.height options.width])));
+B0Aug = getAugmentedImage(B0,[options.height options.width]);
 
 % fetch indices to draw patches at positions idxSet
 A = repmat([1:options.height]',[options.width 1])';

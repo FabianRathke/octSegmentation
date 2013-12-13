@@ -30,7 +30,12 @@ for file = 1:length(files)
 	
 	if options.plotting
 		% check folder to store plots for current file
-		folderName = checkForFolder(sprintf('%s/%s',options.plotsFolder,files(file).name));
+		folderName = checkForFolder(sprintf('%s/%s',options.folderPlots,files(file).name));
+		% load B-Scans for plotting
+		for i = length(collector.options.labelIDs(file,:))
+			collector.options.labelID = collector.options.labelIDs(file,i);
+			eval(sprintf('B%d = loadData(files(file).name,collector.options);',i));
+		end
 	end		
 
 	boundaries = zeros(numVolRegions,numBounds,numColumnsPred);
@@ -58,15 +63,11 @@ for file = 1:length(files)
 		output.prediction_init{file,volRegion} = q_c_plot - sum(options.positions<1);
 		error_init = error_init + sum(sum(abs(output.prediction_init{file,volRegion}(:,columnsShapePred{volRegion})-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion}))))/(numColumnsShape(volRegion)*numBounds);
 		if options.plotting
-			if collector.options.ThreeD
-				fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(volRegion));
-				eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(volRegion)))
-			else
-				plotBScan(B0,q_c_plot,collector.options.columnsPred,sprintf('%s/qc_0%s.eps',folderName,filename));
-			end
+			fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(volRegion));
+			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(volRegion)))
 		end
 	end
-	fprintf('Initial unsigned error: %.2fpx\n',error_init/numVolRegions);
+	fprintf('Initial unsigned error: %.3fpx\n',error_init/numVolRegions);
 	
 	% calculates the constant contributions of the shape prior to the omega-matrices
 	calcShapeTerms;
@@ -92,10 +93,7 @@ for file = 1:length(files)
 			boundaries(volRegion,:,:) = squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
 			change_per_iteration(iter) =  change_per_iteration(iter) + mean(mean(mean(abs(boundaries(volRegion,:,columnsShapePred{volRegion})-old_boundaries(volRegion,:,columnsShapePred{volRegion})))));
 		end
-		fprintf('Mean change in pixel: %.3f\n',change_per_iteration(iter));
-		if options.calcFuncVal
-			objFuncValQ_C;
-		end
+		fprintf('Mean change: %.3fpx\n',change_per_iteration(iter));
 
 		%change_per_iteration(iter) = mean(mean(abs(squeeze(boundaries(iter,:,:))-squeeze(old_boundaries)))); fprintf('Mean change in pixel: %.3f\n',change_per_iteration(iter));
 		for volRegion = 1:numVolRegions
@@ -109,21 +107,29 @@ for file = 1:length(files)
 				boundaries(iter,:,:) = old_boundaries;
 			end	
 		end
-		fprintf('Unsigned error: %.2fpx \n',mean(unsigned_error(iter,:)));
+		fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));
 
 		% after convergencel, save the final result and quit the iteration
 		if (iter == options.iterations || (iter > 1 && change_per_iteration(iter) < options.threshold))
+			output.columnsPred = collector.options.columnsPred;
 			for volRegion = 1:numVolRegions
 				output.prediction{file,volRegion} = squeeze(boundaries(volRegion,:,:));
+				if options.outputMapSolution
+					[a b] = max(squeeze(q_c.singleton(volRegion,:,:,:)),[],3);
+					output.predictionMap{file,volRegion} = b;
+				end
 			end
-			output.change_per_iteration{file} = change_per_iteration; change_per_iteration = [];
-			output.unsigned_error{file} = unsigned_error; unsigned_error = [];		
-			output.q_c_error{file} = q_c_error; q_c_error = [];
-			output.q_b_error{file} = q_b_error; q_b_error = [];
-			output.columnsPred = collector.options.columnsPred;
-			output.q_b{file} = q_b.mu;
-
+			if options.detailedOutput
+				output.change_per_iteration{file} = change_per_iteration; change_per_iteration = [];
+				output.unsigned_error{file} = unsigned_error; unsigned_error = [];		
+				output.q_c_error{file} = q_c_error; q_c_error = [];
+				output.q_b_error{file} = q_b_error; q_b_error = [];
+				output.columnsPred = collector.options.columnsPred;
+				output.q_b{file} = q_b.mu;
+			end
+			% calc the terms of the objective function
 			if options.calcFuncVal
+				objFuncValQ_C;
 				output.funcVal(file) = funcVal;
 			end
 			break

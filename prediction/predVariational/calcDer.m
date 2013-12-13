@@ -24,5 +24,5 @@ end
 
 if collector.options.printTimings
 	GPUsync;
-	fprintf('calcDer: %.3fs\n',toc(calcDerTic));
+	fprintf('[calcDer]: %.3fs\n',toc(calcDerTic));
 end

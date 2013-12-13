@@ -48,18 +48,14 @@ if 0
 end
 
 if collector.options.printTimings
-	fprintf('optQB: %.3f s\n',toc(optQBTic));
+	fprintf('[optQB]: %.3f s\n',toc(optQBTic));
 end
 
 if options.plotting
 	for volRegion = 1:numVolRegions
-		if collector.options.ThreeD
-			idx = (1:numBounds*numColumnsShape(volRegion)) + sum(numColumnsShape(1:volRegion-1))*numBounds;
-			toPlot = single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds));
-			fileSaveName = sprintf('%s/qb_%d/%s_%d.eps',folderName,iter,filename,collector.options.labelIDs(volRegion));
-       		eval(sprintf('plotBScan(B%d,toPlot,collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(volRegion)))
-        else
-			plotBScan(B0,reshape(single(q_b.mu),numColumnsShape,numBounds),collector.options.columnsShape{1},sprintf('%s/qb_%d%s.eps',folderName,iter,filename))
-		end
+		idx = (1:numBounds*numColumnsShape(volRegion)) + sum(numColumnsShape(1:volRegion-1))*numBounds;
+		toPlot = single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds));
+		fileSaveName = sprintf('%s/qb_%d/%s_%d.eps',folderName,iter,filename,collector.options.labelIDs(volRegion));
+		eval(sprintf('plotBScan(B%d,toPlot,collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(volRegion)))
 	end
 end

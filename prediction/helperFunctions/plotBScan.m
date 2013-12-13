@@ -21,9 +21,8 @@ function plotBScan(data,prediction,columns,filename)
 if length(pathstr)>0 && ~exist(pathstr,'dir')
 	mkdir(pathstr);
 end
-data(data>1) = 0;
 figure('visible','off');
-imagesc(sqrt(sqrt(data))); colormap gray; hold on;
+imagesc(data); colormap gray; hold on;
 plot(columns,prediction);
 print(filename,'-depsc2');
 close all

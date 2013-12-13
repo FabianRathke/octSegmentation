@@ -32,6 +32,12 @@ if ~isfield(options,'plotting')
     options.plotting = 0;
 end
 
+if options.plotting == 1
+	if ~isfield(options,'folderPlots')
+		error('Please specify a folder to store the plots via options.folderPlots');
+	end
+end
+
 if ~isfield(options,'threshold_q_c')
 	options.threshold_q_c = 10^-6;
 end
@@ -48,4 +54,8 @@ end
 
 if ~isfield(options,'thresholdAccuracy')
 	options.thresholdAccuracy = realmin('single');
+end
+
+if ~isfield(options,'detailedOutput')
+	options.detailedOutput = 0;
 end

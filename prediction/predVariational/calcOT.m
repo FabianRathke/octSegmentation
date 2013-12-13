@@ -13,8 +13,6 @@ for volRegion = 1:numVolRegions
 end
 mu_a_b = eval(sprintf('%s(mu_a_b)',collector.options.dataTypeCast));
 
-%	condQB = double(1./sqrt(2*pi*sigma_tilde_squared(ones(1,numRows),:)').*exp((-0.5)*((X - mu_a_b(:,ones(1,numRows)))).^2./sigma_tilde_squared(ones(1,numRows),:)'))
-%condQBGPU = double(1./sqrt(2*pi*sigma_tilde_squaredGPU(ones(1,numRows),:)').*exp((-0.5)*((XGPU - mu_a_bGPU(:,ones(1,numRows)))).^2./sigma_tilde_squaredGPU(ones(1,numRows),:)'))';
 condQB = (1./sqrt(2*pi*sigma_tilde_squared(ones(1,numRows),:)').*exp((-0.5)*((X - mu_a_b(:,ones(1,numRows)))).^2./sigma_tilde_squared(ones(1,numRows),:)'))';
 % implicit cast to single precision
 condQB(condQB < options.thresholdAccuracy) = 0;
@@ -60,5 +58,5 @@ end
 
 if collector.options.printTimings
 	GPUsync;
-	fprintf('calcOT: %.3f s\n',toc(ticCalcOT));
+	fprintf('[calcOT]: %.3f s\n',toc(ticCalcOT));
 end

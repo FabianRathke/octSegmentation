@@ -35,5 +35,5 @@ P_mu = (A_k.*factor(:,ones(1,numBounds*numColumnsShapeTotal)))'*A_k;
 
 if collector.options.printTimings
 	GPUsync;
-	fprintf('Initialized Shape Terms in %.3fs \n',toc(ticCalcShape));
+	fprintf('[Initialized Shape Terms]: %.3fs \n',toc(ticCalcShape));
 end
