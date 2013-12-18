@@ -35,7 +35,7 @@ function output = predAppearance(files,collector,params,models,options)
 % Last Revision: 10-Dec-2013
 
 options = setDefaultAppearance(options);
-numClasses = length(models);
+numClasses = models(1).numClasses;
 
 output.prediction = cell(length(files),collector.options.numRegionsPerVolume);
 output.trueLabels = cell(length(files),collector.options.numRegionsPerVolume);
@@ -65,12 +65,11 @@ for i = 1:length(files)
 			numPatches = idxEnd-idxStart+1;
 			% fetch current patches
 			patchesCurrRegion = double(patches.data(idxStart:idxEnd,:));
-	
 			% pre-processing
-			if collector.options.projToEigenspace
-				patchesCurrRegion = (patchesCurrRegion - models(regionVolume,regionBScan,1).mu(1,1))*models(regionVolume,regionBScan,1).W;
-			end
-
+			for i = 1:length(collector.options.preprocessing.patchLevel)
+            	patchesCurrRegion = collector.options.preprocessing.patchLevel{i}{1}(patchesCurrRegion,collector.options.preprocessing.patchLevel{i},models(regionVolume,regionBScan,:));
+	        end
+	
 			% predict appearance terms
 			results(:,idxStart:idxEnd) = options.predAppearance(patchesCurrRegion,models(regionVolume,regionBScan,:));
 		end

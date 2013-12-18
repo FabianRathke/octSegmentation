@@ -36,12 +36,16 @@ for volRegion = 1:numVolRegions
 		% calculate probabilities for first boundary
 		pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
 		q_c.singleton(volRegion,columnsShapePred{volRegion}(i),:,:) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs)';
+%		maxStates = viterbiSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs)';
+%		for j = 1:length(maxStates)
+%			q_c.singleton(volRegion,columnsShapePred{volRegion}(i),j,maxStates(j)) = 1;
+%		end
 	end
 end
 q_c.singleton(q_c.singleton < options.threshold_q_c) = 0;
 
 if collector.options.printTimings
-	fprintf('Init q_c: %.3f\n',toc(initqc));
+	fprintf('[Initialized q_c]: %.3fs\n',toc(initqc));
 end
 
 tic;

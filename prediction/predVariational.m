@@ -31,11 +31,6 @@ for file = 1:length(files)
 	if options.plotting
 		% check folder to store plots for current file
 		folderName = checkForFolder(sprintf('%s/%s',options.folderPlots,files(file).name));
-		% load B-Scans for plotting
-		for i = length(collector.options.labelIDs(file,:))
-			collector.options.labelID = collector.options.labelIDs(file,i);
-			eval(sprintf('B%d = loadData(files(file).name,collector.options);',i));
-		end
 	end		
 
 	boundaries = zeros(numVolRegions,numBounds,numColumnsPred);
@@ -97,10 +92,13 @@ for file = 1:length(files)
 
 		%change_per_iteration(iter) = mean(mean(abs(squeeze(boundaries(iter,:,:))-squeeze(old_boundaries)))); fprintf('Mean change in pixel: %.3f\n',change_per_iteration(iter));
 		for volRegion = 1:numVolRegions
-			idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
-			q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - sum(options.positions<1)-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
-			q_c_error(iter,volRegion,:) = sum(abs(squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2)) - sum(options.positions<1)-output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+			if options.detailedOutput
+				idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
+				q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - sum(options.positions<1)-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
+				q_c_error(iter,volRegion,:) = sum(abs(squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2)) - sum(options.positions<1)-output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+			end
 			unsigned_error(iter,volRegion) = sum(sum(abs((squeeze(boundaries(volRegion,:,:)) - sum(options.positions<1))-output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
+
 			if isnan(unsigned_error(iter,:))
 				fprintf('NaN detected, aborting prediction\n');
 				iter = options.iterations;
@@ -114,17 +112,12 @@ for file = 1:length(files)
 			output.columnsPred = collector.options.columnsPred;
 			for volRegion = 1:numVolRegions
 				output.prediction{file,volRegion} = squeeze(boundaries(volRegion,:,:));
-				if options.outputMapSolution
-					[a b] = max(squeeze(q_c.singleton(volRegion,:,:,:)),[],3);
-					output.predictionMap{file,volRegion} = b;
-				end
 			end
 			if options.detailedOutput
 				output.change_per_iteration{file} = change_per_iteration; change_per_iteration = [];
 				output.unsigned_error{file} = unsigned_error; unsigned_error = [];		
 				output.q_c_error{file} = q_c_error; q_c_error = [];
 				output.q_b_error{file} = q_b_error; q_b_error = [];
-				output.columnsPred = collector.options.columnsPred;
 				output.q_b{file} = q_b.mu;
 			end
 			% calc the terms of the objective function

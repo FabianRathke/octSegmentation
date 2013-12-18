@@ -2,7 +2,7 @@ function [h mu Sigma] = extractShapeModel(files,collector)
 % extractShapeModel - fetches the ground truth for all entries in files; calculates the mean shape and its covariance matrix
 %
 % Syntax:
-%   [h mu Sigma] = extractShapeModel(files,options,collector)
+%   [h mu Sigma] = extractShapeModel(files,collector)
 %
 % Inputs:
 %   files     - [struct] files to fetch ground truth from

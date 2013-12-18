@@ -24,9 +24,10 @@ function models = trainAppearance(files,collector,params,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 06-Dec-2013
+% Last Revision: 16-Dec-2013
 
 tstart = tic;
+models = struct();
 % iterate over the regions of a volume; for 2-D B-Scans numRegionsPerVolume is 1
 for regionVolume = 1:collector.options.numRegionsPerVolume
 	% selects the IDs for the current region with the volume for all files for the collector
@@ -36,34 +37,32 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 
 	% train seperate models for each Region
 	for regionBScan = 1:collector.options.numRegionsPerBScan
+		% pre-processing of the patches
+		for i = 1:length(collector.options.preprocessing.patchLevel)
+			[trainData(regionBScan).data appearanceModel] = collector.options.preprocessing.patchLevel{i}{1}(trainData(regionBScan),collector.options.preprocessing.patchLevel{i});
+		end
+		models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
+
 		% find class ids (i.e. classes representing boundary and layer patches)
 		ids = unique(trainData(regionBScan).classID);
-		% optional projection onto a low-dimensional subspace
-		if collector.options.projToEigenspace
-			[V D] = eig(cov(trainData(regionBScan).data));
-			W = V(:,end-collector.options.numModesAppearance+1:end);
-			mu = mean(trainData(regionBScan).data,1);
-			trainData(regionBScan).data = (trainData(regionBScan).data-repmat(mu,size(trainData(regionBScan).data,1),1))*W;
-		end
-		
-		% for each class train an appearance model
-		for k = 1:length(ids)
-			M = squeeze(trainData(regionBScan).data(trainData(regionBScan).classID==ids(k),:));
-			% call the appearance model set be the user			
-			appearanceModel = options.appearanceModel(M,params,options);
-			% grab fields and store them in the global models struct
-			names = fieldnames(appearanceModel);
-			for i = 1:length(names)
-				eval(sprintf('models(regionVolume,regionBScan,k).%s = appearanceModel.%s;',names{i},names{i}));
-			end
-			models(regionVolume,regionBScan,k).ID = ids(i);
-		end
-		
-		if collector.options.projToEigenspace
-			models(regionVolume,regionBScan,1).W = W;
-			models(regionVolume,regionBScan,1).mu = mu;
-		end
+
+		% call the appearance model set be the user			
+		appearanceModel = options.appearanceModel(trainData(regionBScan),ids,params,options);
+	    models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
+	end
+end
+models(1).numClasses = length(ids);
+printMessage(sprintf('... trained appearance models in %.2f s ...\n',toc(tstart)),1,collector.options.verbose);
+end
+
+function models = appendToModel(models,appearanceModel,regionVolume,regionBScan)
+
+% grab fields and store them in the global models struct
+names = fieldnames(appearanceModel);
+for i = 1:length(names)
+	for j = 1:length(appearanceModel)
+		eval(sprintf('models(regionVolume,regionBScan,j).%s = appearanceModel(j).%s;',names{i},names{i}));
 	end
 end
 
-printMessage(sprintf('... trained appearance models in %.2f s ...\n',toc(tstart)),1,collector.options.verbose);
+end

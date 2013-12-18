@@ -6,10 +6,11 @@ function B0 = loadData(filename,options)
 % Inputs:
 %	filename - [string] filename of the matfile to load
 %	options  - [struct] controller options
-%		.folder_data - [string] points to the folder of filename
-%		.labelID 	 - [int] Spectralis B-Scans are labeled B0,B1,..., labelID is ID of the B-Scan to load
-%		.clip		 - [boolean] indicates whether to clip a B-Scan at the left and right border
-%		.clipRange	 - [array](2) defines the left and right border of the B-Scan after clipping
+%     .folder_data     - [string] points to the folder of filename
+%     .labelID 	       - [int] Spectralis B-Scans are labeled B0,B1,..., labelID is ID of the B-Scan to load
+%     .clip		       - [boolean] indicates whether to clip a B-Scan at the left and right border
+%     .clipRange	   - [array](2) defines the left and right border of the B-Scan after clipping
+%     .loadRoutineData - [string] the user-defined routine that is used to load the data
 %
 % Outputs:
 %	B0 - [matrix] the B-Scan 
@@ -21,7 +22,7 @@ function B0 = loadData(filename,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 13-Dec-2013
 
-if strcmp(options.dataset,'spectralis')
+if strcmp(options.loadRoutineData,'spectralis')
 	if isfield(options,'labelID')
 		load([options.folder_data filename '.mat'],sprintf('B%d',options.labelID));
 		eval(sprintf('B0 = B%d;',options.labelID));
@@ -29,14 +30,19 @@ if strcmp(options.dataset,'spectralis')
 	else
 	   load([options.folder_data filename '.mat'],'B0');
 	end  
+	B0(B0>10) = 0;
 	B0 = sqrt(sqrt(B0));
-elseif strcmp(options.dataset,'AMDDataset')
+elseif strcmp(options.loadRoutineData,'AMDDataset')
 	load([options.folder_data filename],'images');
 	B0 = squeeze(images(:,:,options.labelID));
 end
 
 if options.clip
 	B0 = B0(:,options.clipRange(1):options.clipRange(2));
+end
+
+for i = 1:length(options.preprocessing.scanLevel)
+	B0 = options.preprocessing.scanLevel{i}{1}(B0,options.preprocessing.scanLevel{i});
 end
 
 %if options.addNoise

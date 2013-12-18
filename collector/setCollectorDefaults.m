@@ -35,10 +35,16 @@ if ~isfield(options,'LayersTrain') options.LayersTrain = 1:10; end
 if ~isfield(options,'EdgesPred') options.EdgesPred = 1:9; end
 if ~isfield(options,'LayersPred') options.LayersPred = 1:10; end
 
-% shall patches be projected onto a low-dimensional manifold determined by PCA?
-if ~isfield(options,'projToEigenspace') options.projToEigenspace = true; end
-% dimension of the low-dimensional manifold
-if ~isfield(options,'numModesAppearance') options.numModesAppearance = 20; end
+if ~isfield(options,'preprocessing') options.preprocessing = struct(); end
+% preprocessing on patch-Level (performed in trainAppearance and predictAppearance)
+if ~isfield(options.preprocessing,'patchLevel')
+	options.preprocessing.patchLevel = {{@projToEigenspace,20}};
+end
+
+% preprocessing on scan-Level (performed on loadData)
+if ~isfield(options.preprocessing,'scanLevel')
+	options.preprocessing.scanLevel = {};
+end
 
 % fetches patches for the complete test scan; if false grabs only a subset 
 if ~isfield(options,'testFullImage') options.testFullImage = true; end
