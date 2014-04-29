@@ -5,10 +5,10 @@ function model = trainGlasso(trainData,ids,params,options)
 %   model = trainGlasso(data,params,options)
 %
 % Inputs:
-%   trainData    - [matrix](numPatches,dimData) patch information from the training set for one class
-%   params  - [struct] 
+%   trainData - [matrix](numPatches,dimData) patch information from the training set for one class
+%   params    - [struct] 
 %     .glasso - [float] controls the sparsity of the precision matrix, bigger values correspond to sparser matrices
-%   options - [struct] options struct (currently no options in use)
+%   options   - [struct] options struct (currently no options in use)
 %
 % Outputs:
 %   model - [struct] 
@@ -20,6 +20,8 @@ function model = trainGlasso(trainData,ids,params,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 13-Dec-2013
 
+options = setDefaultOptions(params,options);
+
 for k = 1:length(ids)
 	M = squeeze(trainData.data(trainData.classID==ids(k),:));
 	
@@ -27,7 +29,7 @@ for k = 1:length(ids)
 	S = cov(M); % empirical covariance matrix
 
 	% calls a C implementation of the glasso algorithm
-	[model(k).S model(k).P] = cglasso(S,params.glasso,1,[],[]);
+	[model(k).S model(k).P] = cglasso(double(S),options.glasso,1,[],[]);
 
 	% determine the sparsity of P
 	if (length(mu)^2-sum(sum(model(k).P==0)) < length(mu)^2/10)
@@ -42,4 +44,10 @@ for k = 1:length(ids)
 	end
 
 	model(k).class_mean = mu;
+end
+
+end
+
+function options = setDefaultOptions(params,options)
+	options = checkFields(options,params,0.01,'glasso');
 end

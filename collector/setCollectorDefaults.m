@@ -1,18 +1,35 @@
-function options = setCollectorDefaults(options,params,files)
+function options = setCollectorDefaults(options,params,files,folderData,folderLabels)
 % setCollectorDefaults - sets defauls values for variables used in the collectors; variables from params, used in a CV, can overwrite the standard values e.g. for the patch size
 %  
-% Details for each variable and its default value can be found within the source code
-%
 % Syntax:	
-%   options = setCollectorDefaults(options,params,files)
-%     .testFullImage
-%     .width
-%     .height
+%   options = setCollectorDefaults(options,params,files,folderData,folderLabels)
 %
 % Inputs:
-%   options - [struct] options struct
-%   params  - [struct] holds params used for example in cross-validation 
-%   files   - [struct] output of Matlabs dir function
+%   options      - [struct] options struct
+%       .width               - [int] patch width in px (has to be odd number). Default: [15]
+%       .height              - [int] patch height in px. Default: [15]
+%       .clip                - [boolean] determines whether to clip parts of the scan before segmentation; useful for example to remove the nerve head. Default: [false]
+%       .clipRange           - [array](2) left and right boundary for clipping. Default: [1 scan-width]
+%       .preprocessing       - [struct] struct with fields 'patchLevel' and 'scanLevel'; for each field cell array of methods and their parameters; Default: [options.preprocessing.patchLevel = {{@projToEigenspace,20}}]
+%       .loadRoutineData     - [string] user-defined routine to load a B-Scan; see loadData.m for details. Default: ['spectralis'] 
+%       .loadRoutineLabels   - [string] user-defined routine to load ground truth; see loadLabels.m for details. Default: ['LabelsFromLabelingTool']
+%       .labelIDs            - [array](numFiles,numRegionsPerVolume) holds ids to idenity the scans used in a 3-D volume 
+%       .BScanRegions        - [array](2,numBScanRegions) can be used to divide each B-Scan into regions with seperate appearance models; left and right boundaries of each reagion. Default: [[1 numColumns]]
+%       .numRegionsPerBScan  - [int] number of regions in each B-Scan, automatically determined from BScanRegions
+%       .numRegionsPerVolume - [int] for 3-D volumes, the number of B-Scans; for 2-D set = 1
+%       .calcOnGPU           - [boolean] move parts of the calculation onto the GPU. Default: [false]
+%       .numPatches          - [int] number of patches to draw from each file for each appearance class. Default: [30]
+%       .patchPosition       - [string] draw patches for layer-classes randomly ('random') or from the middle ('middle') for each column. Default: ['middle']
+%       .centerPatches       - [boolean] subtract mean of each patch. Default: [true]
+%       .columnsShape        - [cell-array](1,numRegionsPerVolume) holds an array for each region; indicates which columns of the B-Scan are used for the shape-prior (intermediate columns are interpolated). Default: columnsShape{i} = [1:2:scan-width]
+%       .columnsPred         - [array](2) determines for which columns predictions are made. Will be applied to each scan in the volume. Default: [1:2:scan-width]
+%       .printTimings        - [boolean] print cpu/gpu timings of the different modules. Default: [false]
+%       .saveAppearanceTerms - [boolean] return appearance model predictions for each pixel. Default: [0]
+%       .verbose             - [int] the amount of printed information while runnning the programm (0 (nothing) - 2 (maximal)). Default: [1]
+%   params       - [struct] holds params used for example in cross-validation 
+%   files        - [struct] training set, output of Matlabs dir function
+%   folderData   - [string] path with mat-files containing the OCT scans 
+%   folderLabels - [string] path with mat-files containing ground truth
 %
 % Outputs:
 %   options - [struct] options struct with default values set
@@ -22,18 +39,14 @@ function options = setCollectorDefaults(options,params,files)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 06-Dec-2013
+% Last Revision: 18-Dec-2013
+
+options.folder_data = folderData;
+options.folder_labels = folderLabels;
 
 % patch width and height
 options = checkFields(options,params,15,'width');
 options = checkFields(options,params,15,'height');
-
-% edges and layers used for training and prediction
-if ~isfield(options,'EdgesTrain') options.EdgesTrain = 1:9; end
-if ~isfield(options,'LayersTrain') options.LayersTrain = 1:10; end
-
-if ~isfield(options,'EdgesPred') options.EdgesPred = 1:9; end
-if ~isfield(options,'LayersPred') options.LayersPred = 1:10; end
 
 if ~isfield(options,'preprocessing') options.preprocessing = struct(); end
 % preprocessing on patch-Level (performed in trainAppearance and predictAppearance)
@@ -46,20 +59,13 @@ if ~isfield(options.preprocessing,'scanLevel')
 	options.preprocessing.scanLevel = {};
 end
 
-% fetches patches for the complete test scan; if false grabs only a subset 
-if ~isfield(options,'testFullImage') options.testFullImage = true; end
+% the amount of information output
+if ~isfield(options,'verbose') options.verbose = 1; end
 
-% width and height of a B-Scan
-if ~isfield(options,'X')
-	if isfield(options,'clipRange')
-		options.X = options.clipRange(2) - options.clipRange(1) + 1;
-	else
-		options.X = 768;
-	end
-end
-if ~isfield(options,'Y') options.Y = 496; end
+% define loading routines for labels and data sets
+if ~isfield(options,'loadRoutineData') options.loadRoutineData = 'spectralis'; end
+if ~isfield(options,'loadRoutineLabels') options.loadRoutineLabels = 'LabelsFromLabelingTool'; end
 
-options.numFiles = length(files);
 % the number of regions per file/volume, 1 ==  2-D Scan, > 1 == 3-D Volume
 if ~isfield(options,'numRegionsPerVolume') 
 	if ~isfield(options,'labelIDs')
@@ -68,16 +74,45 @@ if ~isfield(options,'numRegionsPerVolume')
 		options.numRegionsPerVolume = size(options.labelIDs,2);
 	end
 end
-% indicates how single scans of a volume are to be identified (are then used in functions loadLabels and loadData)
-if ~isfield(options,'labelIDs') options.labelIDs = zeros(options.numFiles,options.numRegionsPerVolume); end
+% ids for single scans of a volume  (used in functions loadLabels and loadData)
+if ~isfield(options,'labelIDs') options.labelIDs = zeros(length(files),options.numRegionsPerVolume); end
+
+if ~isfield(options,'clip') 
+	options.clip = 0; 
+else
+	if options.clip
+		if ~isfield(options,'clipRange') 
+			error('Please specify the clip range in options.clipRange');
+		end
+	end
+end
+
+% pull a sample scan and set its dimensions
+options.labelID = options.labelIDs(1);
+B0 = loadData(files(1).name,options);
+if isfield(options,'clipRange')
+	options.X = options.clipRange(2) - options.clipRange(1) + 1;
+else
+	options.X = size(B0,2);
+end
+options.Y = size(B0,1);
+
+% enables to clip the width of B-Scans; i.e. useful for volumnes to remove the part containing the nerve head
+
+% pull sample ground truth
+segmentation = loadLabels(files(1).name,options);
+options = rmfield(options,'labelID');
+
+numBoundaries = size(segmentation,1); numLayers = numBoundaries + 1;
+% edges and layers used for training and prediction
+options.EdgesTrain = 1:numBoundaries;
+options.LayersTrain = 1:numLayers;
+options.EdgesPred = 1:numBoundaries;
+options.LayersPred = 1:numLayers;
 
 % can be used to divide each B-Scan into regions, which use seperate appearance models
 if ~isfield(options,'BScanRegions') options.BScanRegions = [1 options.X]; end
-if ~isfield(options,'numRegionsPerBScan') options.numRegionsPerBScan = size(options.BScanRegions,1); end
-
-
-% add noise to patches (in order to simulate noisier B-Scans)
-if ~isfield(options,'addNoise') options.addNoise = 0; end
+options.numRegionsPerBScan = size(options.BScanRegions,1);
 
 % default behavior is to perform all calculations on the CPU
 if ~isfield(options,'calcOnGPU') options.calcOnGPU = 0; end
@@ -100,10 +135,6 @@ if ~isfield(options,'numPatches') options.numPatches = 30; end
 % substract the patch mean from each patch; make appearance terms less vulnerable to variations of intensity between and within OCT scans
 if ~isfield(options,'centerPatches') options.centerPatches = 1; end
 
-% enables to clip the width of B-Scans; i.e. useful for volumnes to remove the part containing the nerve head
-if ~isfield(options,'clip') options.clip = 0; else
-	if ~isfield(options,'clipRange') options.clipRange = [1 options.X]; end
-end
 
 % which columns are part of the shape prior p(b) and are used for q_b (allows for sparse representations; intermediate columns are interpolated);
 % can be set for each region within the volume separately
@@ -116,23 +147,11 @@ end
 % which columns are to be predicted, i.e. are used in q_c
 if ~isfield(options,'columnsPred') options.columnsPred = round(linspace(1,options.X,options.X/2)); end
 
-
-% patches are drawn from random positions within their layer; other option is 'middle', patches are drawn from the center of their respective layer
-if ~isfield(options,'patchPosition') options.patchPosition = 'random'; end
-
-% if one segments volumes, this has to be set to 1
-if ~isfield(options,'ThreeD') options.ThreeD = 0; end
-
-% exist labels for the file, if true the collector collects ground trouth for later evaluation
-if ~isfield(options,'storeLabels') options.storeLabels = 1; end
-
-% the amount of information output
-if ~isfield(options,'verbose') options.verbose = 1; end
+% patches are drawn from the center of their layer
+if ~isfield(options,'patchPosition') options.patchPosition = 'middle'; end
 
 % print Timings during prediction
 if ~isfield(options,'printTimings') options.printTimings = 0; end
 options.numLayers = length(options.LayersTrain);
 
 if ~isfield(options,'saveAppearanceTerms') options.saveAppearanceTerms = 0; end
-
-if ~isfield(options,'dataset') options.dataset = 'spectralis'; end

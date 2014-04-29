@@ -30,10 +30,9 @@ function trnData = collectTrnData(files,options)
 % Last Revision: 05-Dec-2013
 
 pw = ([options.height options.width]-1)/2; % number of pixels left and right of the center column in each patch
-idx = floor(linspace(pw(2)+1,options.X-pw(2)*2,options.numPatches)); % columns across the B-Scan to draw patches from
 
 numClasses = length(options.LayersTrain) + length(options.EdgesTrain);
-numPatches = length(idx)*length(files)*numClasses;
+numPatches = options.numPatches*length(files)*numClasses;
 
 trnData.data = zeros(numPatches,options.height*options.width);
 trnData.classID = zeros(1,numPatches,'int8');

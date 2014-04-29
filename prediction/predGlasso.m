@@ -24,7 +24,7 @@ numPatches = size(patches,1);
 results = zeros(numClasses,numPatches);
 
 for j = 1:numClasses
-	patches_tmp = double(patches) - models(1,1,j).class_mean(ones(1,numPatches),:);
+	patches_tmp = double(patches - models(1,1,j).class_mean(ones(1,numPatches),:));
     results(j,:) = -(size(patches_tmp,2)/2)*log(2*pi) + 1/2*sum(log(eig(models(1,1,j).P))) - sum(patches_tmp*(squeeze(models(1,1,j).P)).*patches_tmp,2)/2;
 end
 

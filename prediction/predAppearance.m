@@ -7,13 +7,14 @@ function output = predAppearance(files,collector,params,models,options)
 % Inputs:
 %   files     - [struct] files to fetch ground truth from
 %   collector - [struct] variables that control the collection of training and test data; see setCollectorsDefault for a description of the variables
-%     .storeLabels
-%     .columnsPred 
-%     .labelIDs
-%     .printTimings
-%     .numRegionsPerBScan
-%     .dataType
-%     .projToEigenspace
+%     .options.columnsPred 
+%     .options.labelIDs
+%     .options.printTimings
+%     .options.numRegionsPerBScan
+%     .options.numRegionsPerVolume
+%     .options.dataType
+%     .options.preprocessing.patchLevel
+%     .options.BScanRegions
 %   params    - [struct]
 %   models    - [struct] appearance models for all files and BScans; have to be compatible with the function called in 
 %   options   - [struct]
@@ -63,9 +64,11 @@ for i = 1:length(files)
 			idxStart = 1 + (idxSet(1)-1)*collector.options.Y;
 			idxEnd = idxSet(end)*collector.options.Y;
 			numPatches = idxEnd-idxStart+1;
-			% fetch current patches
+			
+			% fetch the current set of patches
 			patchesCurrRegion = double(patches.data(idxStart:idxEnd,:));
-			% pre-processing
+			
+			% pre-processing on patch-level (for preprocessing on scan-level see loadData.m)
 			for i = 1:length(collector.options.preprocessing.patchLevel)
             	patchesCurrRegion = collector.options.preprocessing.patchLevel{i}{1}(patchesCurrRegion,collector.options.preprocessing.patchLevel{i},models(regionVolume,regionBScan,:));
 	        end
@@ -106,6 +109,10 @@ end
 
 if (~isfield(options,'logOutput'))
     options.logOutput = false;
+end
+
+if (~isfield(options,'predAppearance'))
+	options.predAppearance = @predGlasso;
 end
 
 end

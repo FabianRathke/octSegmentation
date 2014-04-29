@@ -4,10 +4,9 @@ function patches = fetchPatches(filename,idxSet,options)
 % Inputs:
 %   filename - [string] filename of the matfile to load
 %   options  - [struct]
-%       .centerPatches - [boolean] points to the folder of filename
-%       .height        - [int] Spectralis B-Scans are labeled B0,B1,..., labelID is ID of the B-Scan to load
-%       .width         - [int] indicates whether to clip a B-Scan at the left and right border
-%       .clipRange     - [array](2) defines the left and right border of the B-Scan after clipping
+%       .centerPatches - [boolean] substract the mean of each patch
+%       .height        - [int] patch height in px (has to odd number)
+%       .width         - [int] patch width in px
 %
 % Outputs:
 %   B0 - [matrix] the B-Scan 

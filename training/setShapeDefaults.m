@@ -1,0 +1,56 @@
+function options = setShapeDefaults(options,params,files)
+% setShapeDefaults - sets the default values for variables that are used to train the shape prior
+%
+% Syntax:
+%   options = setShapeDefaults(options,params)
+%
+% Inputs:
+%   options   - [struct] options struct
+%     .numModes         - [int] number of modes used in PPCA
+%     .shapePriorFolder - [string] points to the folder where shape models are loaded from and saved to. (default: '$HOME/shapemodels')
+%     .loadShape        - [boolean] if true, shape model is loaded from shapePriorFolder and not trained (default: false)
+%     .saveShape        - [boolean] if true, trained shape model is saved in shapePriorFolder (default: false)
+%     .loadShapeName    - [string] filename of the shape model loaded (default: hash from concatenated filenames)
+%     .saveShapeName    - [string] filename of the shape model saved (default: hash from concatenated filenames)
+%   params    - [struct] holds params used for example in cross-validation 
+%     .numModes   - same as above
+%
+% Outputs:
+%   options - [struct] options struct augmented by default values for unset field
+%
+% See also: trainShape, setCollectorDefaults, setAppearanceDefaults
+
+% Author: Fabian Rathke
+% email: frathke@googlemail.com
+% Website: https://github.com/FabianRathke/octSegmentation
+% Last Revision: 29-Apr-2013
+
+options = checkFields(options,params,20,'numModes');
+
+if ~isfield(options,'shapePriorFolder')
+	options.shapePriorFolder = [getuserdir,'/shapemodels'];
+	% check if folder exists
+	if ~exist(options.shapePriorFolder)
+		mkdir(options.shapePriorFolder);
+	end
+end
+
+if ~isfield(options,'loadShape')
+	options.loadShape = 0;
+end
+
+if ~isfield(options,'saveShape')
+	options.saveShape = 0;
+end
+
+if options.loadShape
+	if ~isfield(options,'loadShapeName')
+		options.loadShapeName = hash([files.name],'MD5');
+	end
+end
+
+if options.saveShape
+	if ~isfield(options,'saveShapeName')
+		options.saveShapeName = hash([files.name],'MD5');
+	end
+end

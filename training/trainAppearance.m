@@ -7,11 +7,10 @@ function models = trainAppearance(files,collector,params,options)
 % Inputs:
 %   files     - [struct] output of the matlab function 'dir'
 %   collector - [struct] holds the options for the collector grabbing the training patches, description given in setCollectorDefaults
-%     .labelIDs
-%     .numRegionsPerVolume
-%     .numRegionsPerBScan
-%     .projToEigenspace
-%     .numModesAppearance
+%     .options.labelIDs
+%     .options.numRegionsPerVolume
+%     .options.numRegionsPerBScan
+%     .options.preprocessing
 %   params    - [struct] holds params used for example in cross-validation 
 %   options   - [struct] holds options used within the appearance function
 %     .appearanceModel - [string] name of the function to call
@@ -24,7 +23,7 @@ function models = trainAppearance(files,collector,params,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 16-Dec-2013
+% Last Revision: 28-Apr-2014
 
 tstart = tic;
 models = struct();
@@ -37,26 +36,27 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 
 	% train seperate models for each Region
 	for regionBScan = 1:collector.options.numRegionsPerBScan
-		% pre-processing of the patches
+		% pre-processing of the patches [calls a arbitrary set of models defined in collector.options.preprocessing.patchLevel]
 		for i = 1:length(collector.options.preprocessing.patchLevel)
 			[trainData(regionBScan).data appearanceModel] = collector.options.preprocessing.patchLevel{i}{1}(trainData(regionBScan),collector.options.preprocessing.patchLevel{i});
+			models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
 		end
-		models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
-
+	
 		% find class ids (i.e. classes representing boundary and layer patches)
 		ids = unique(trainData(regionBScan).classID);
 
-		% call the appearance model set be the user			
+		% call the appearance model set by the user	
 		appearanceModel = options.appearanceModel(trainData(regionBScan),ids,params,options);
 	    models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
 	end
 end
 models(1).numClasses = length(ids);
 printMessage(sprintf('... trained appearance models in %.2f s ...\n',toc(tstart)),1,collector.options.verbose);
-end
+
+end % end function
+
 
 function models = appendToModel(models,appearanceModel,regionVolume,regionBScan)
-
 % grab fields and store them in the global models struct
 names = fieldnames(appearanceModel);
 for i = 1:length(names)

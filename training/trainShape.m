@@ -7,15 +7,18 @@ function models = trainShape(files,collector,params,options)
 % Inputs:
 %   files     - [struct] output of the matlab function 'dir'
 %   collector - [struct] holds the options for the collector grabbing the training patches, description given in setCollectorDefaults
-%     .columnsShape
-%     .
+%     .options.columnsShape
+%     .options.numRegionsPerVolume
+%     .options.Y
+%     .options.verbose
+%     .options.EdgesTrain
 %   params    - [struct] holds params used for example in cross-validation 
 %   options   - [struct] holds options used within the appearance function
 %     .numModes         - [int] number of eigenvectors to be used
-%     .loadShape        - [boolean]
-%     .loadShapeName    - [string]
-%     .saveShape        - [boolean]
-%     .saveShapeName    - [string]
+%     .loadShape        - [boolean] loads a stored shape model
+%     .loadShapeName    - [string] the filename of the shape model to load
+%     .saveShape        - [boolean] saves the calculated shape model as mat-file
+%     .saveShapeName    - [string] the filename for the model to store
 %     .shapePriorFolder - [string] folder where shape models are stored
 %
 % Outputs:
@@ -31,7 +34,7 @@ function models = trainShape(files,collector,params,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 10-Dec-2013
+% Last Revision: 28-Apr-2013
 
 % generates a default filename out of the set of the trainings set filenames
 h = hash([files.name],'MD5');
@@ -39,7 +42,7 @@ options = setDefaultShape(options,params,files);
 
 if options.loadShape
 	tic;
-	if isfield(options,'loadShapeName') h = options.loadShapeName; end
+	if isfield(options,'loadShapeName') h = options.loadShapeName; eNd
 
 	if exist(sprintf('%s/%s.mat',options.shapePriorFolder,h),'file')
 		load(sprintf('%s/%s.mat',options.shapePriorFolder,h));
@@ -56,7 +59,7 @@ if options.loadShape
 else
 	% fetch the ground truth for files
 	[data mu Sigma] = extractShapeModel(files,collector);
-	printMessage(sprintf('... train shape prior model (can take several minutes) ... \n'),1,collector.options.verbose);
+	printMessage(sprintf('... train shape prior model (may take several minutes) ... \n'),1,collector.options.verbose);
 	tic;
 	% ******* PPCA *********, see Tipping et al, 1999
 	[V D] = eig(Sigma); % eigendecomposition of the covariance matrix 
@@ -82,7 +85,7 @@ else
 				idx_a = i + (j-2)*numColumns + numBounds*sum(numColumnsShape(1:region-1));
 				idx_b = idx_a + numColumns;
 				P = inv(models.WML([idx_a idx_b],:)*models.WML([idx_a idx_b],:)' + eye(2)*models.sigmaML);
-				pTransTmp{i,j} = sparse(getCondTransMatrix([models.mu(idx_a) models.mu(idx_b)]',P,collector.options.Y,options));
+				pTransTmp{i,j} = sparse(getCondTransMatrix([models.mu(idx_a) models.mu(idx_b)]',P,collector.options.Y));
 			end
 		end
 		models.pTransV{region} = pTransTmp;
@@ -90,6 +93,7 @@ else
 	if options.saveShape
 		if isfield(options,'saveShapeName') h = options.saveShapeName; end
 		save(sprintf('%s/%s.mat',options.shapePriorFolder,h),'models','-v7.3')
+		printMessage(fprintf('Stored shape model for later usage in %s\n',sprintf('%s/%s.mat',options.shapePriorFolder,h)),1,collector.options.verbose);
 	end
 
 	printMessage(sprintf('... trained shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);

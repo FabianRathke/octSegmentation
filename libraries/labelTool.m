@@ -10,9 +10,7 @@ function labelTool(filename,collector,restore)
 %
 % Input: 
 %	filename  - [string] name of the matfile that holds the data
-%	collector - [struct] containts options required
-%     .
-%     .
+%	collector - [struct] containts options required (see the manual for the required options)
 %	restore   - [boolean] whether existing labels should be used as starting point
 %
 % See also: loadData, loadLabels
@@ -23,25 +21,24 @@ function labelTool(filename,collector,restore)
 %
 % Different modes for left-click:
 % ----------------------------------
-%   a - (a)dds point
-%   d - (d)eletes (nearest) point
-%   e - (e)dits (nearest) point
-%   f - (f)uses current line with selected point
-%   g - selects (nearest) point
+%   a - (a)dds marker
+%   d - (d)eletes (nearest) marker
+%   e - (e)dits (nearest) marker
+%   f - (f)uses current line with selected marker
 %
 % General Controls
 % ----------------------------------
-%   s           - saves interpolation data and points; generates preview
+%   s           - saves interpolation data and markers; generates preview
 %   n           - generates new line
 %   r           - flattens the scan along the current boundary
-%   backspace   - deletes current point
+%   backspace   - deletes current marker
 %   control + d - deletes current line (marked green)
-%   q,w	        - switch through lines
-%   z,x         - switch through points
+%   q,w	        - cycle through boundaries
+%   z,x         - cycle through markers within the current boundary
 %   b           - hide/show lines
-%   control + b - hide/show points
+%   control + b - hide/show markers
 %   c           - skip cropping
-%   arrow keys  - use to move the selected point 
+%   arrow keys  - use to move the selected marker
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com

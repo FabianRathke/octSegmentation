@@ -5,11 +5,20 @@ function output = predVariational(files,collector,params,models,options)
 %   output = predVariational(files,collector,params,models,options) 
 %
 % Inputs:
-%   files     - [struct] files to fetch ground truth from
+%   files     - [struct] files for which predictions will be made
 %   collector - [struct] variables that control the collection of training and test data; see setCollectorsDefault for a description of the variables
+%      .options.labelIDs
+%      .options.numRegionsPerVolume
 %   params    - [struct]
-%   models    - [struct] appearance models for all files and BScans; have to be compatible with the function called in 
+%   models    - [struct] appearance models for all files and BScans; have to be compatible with the function called in trainModels.m 
 %   options   - [struct]
+%      .plotting       - [boolean] plots are made of 
+%      .folderPlots    - [string]
+%      .calcFuncVal    - [boolean]
+%      .detailedOutput - [boolean] 
+%      .iterations     - [int]
+%      .threshold      - [float]
+%      .threshold_q_c  - [float] 
 %
 % Outputs:
 %   output - [struct]
@@ -21,7 +30,7 @@ function output = predVariational(files,collector,params,models,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 12-Dec-2013
+% Last Revision: 29-Apr-2014
 
 initSegmentation;
 
@@ -55,7 +64,7 @@ for file = 1:length(files)
 		q_c_plot = squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
 
 		old_boundaries(volRegion,:,:) = q_c_plot;
-		output.prediction_init{file,volRegion} = q_c_plot - sum(options.positions<1);
+		output.prediction_init{file,volRegion} = q_c_plot;
 		error_init = error_init + sum(sum(abs(output.prediction_init{file,volRegion}(:,columnsShapePred{volRegion})-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion}))))/(numColumnsShape(volRegion)*numBounds);
 		if options.plotting
 			fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(volRegion));
@@ -94,10 +103,10 @@ for file = 1:length(files)
 		for volRegion = 1:numVolRegions
 			if options.detailedOutput
 				idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
-				q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - sum(options.positions<1)-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
-				q_c_error(iter,volRegion,:) = sum(abs(squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2)) - sum(options.positions<1)-output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+				q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
+				q_c_error(iter,volRegion,:) = sum(abs(squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2)) -output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
 			end
-			unsigned_error(iter,volRegion) = sum(sum(abs((squeeze(boundaries(volRegion,:,:)) - sum(options.positions<1))-output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
+			unsigned_error(iter,volRegion) = sum(sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
 
 			if isnan(unsigned_error(iter,:))
 				fprintf('NaN detected, aborting prediction\n');
@@ -107,7 +116,7 @@ for file = 1:length(files)
 		end
 		fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));
 
-		% after convergencel, save the final result and quit the iteration
+		% after convergence, save the final result and quit the iteration
 		if (iter == options.iterations || (iter > 1 && change_per_iteration(iter) < options.threshold))
 			output.columnsPred = collector.options.columnsPred;
 			for volRegion = 1:numVolRegions

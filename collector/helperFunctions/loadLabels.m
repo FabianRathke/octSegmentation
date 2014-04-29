@@ -1,5 +1,5 @@
 function interpolation = loadLabels(filename,options)
-% loadLabels - loads labels (i.e. ground truth of OCT-scans) for the respective dataset defined by options.dataset
+% loadLabels - loads labels (i.e. ground truth of OCT-scans) with the respective routine defined in options.loadRoutineLabels
 % 
 % Inputs:
 %   filename - [string] filename => the name of the matfile holding the data with an additional _option.labelID_coordinates
@@ -33,6 +33,8 @@ elseif strcmp(options.loadRoutineLabels,'spectralisLabels')
 elseif strcmp(options.loadRoutineLabels,'AMDDataset')
 	load([options.folder_labels filename '_' num2str(options.labelID) '_coordinates.mat']);
 	interpolation = [zeros(size(interpolation,1),200) interpolation zeros(size(interpolation,1),200)];
+else
+	error('Please specify a valid routine for loading labels in collector.options.loadRoutineLabels');
 end
 printMessage(sprintf('Loaded labels for %s and region %d.\n',filename,options.labelID),2,options.verbose);
 
