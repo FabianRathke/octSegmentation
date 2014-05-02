@@ -14,12 +14,12 @@ function models = trainShape(files,collector,params,options)
 %     .options.EdgesTrain
 %   params    - [struct] holds params used for example in cross-validation 
 %   options   - [struct] holds options used within the appearance function
-%     .numModes         - [int] number of eigenvectors to be used
-%     .loadShape        - [boolean] loads a stored shape model
-%     .loadShapeName    - [string] the filename of the shape model to load
-%     .saveShape        - [boolean] saves the calculated shape model as mat-file
-%     .saveShapeName    - [string] the filename for the model to store
-%     .shapePriorFolder - [string] folder where shape models are stored
+%     .numModes      - [int] number of eigenvectors to be used
+%     .loadShape     - [boolean] loads a stored shape model
+%     .loadShapeName - [string] the filename of the shape model to load
+%     .saveShape     - [boolean] saves the calculated shape model as mat-file
+%     .saveShapeName - [string] the filename for the model to store
+%     .shapeFolder   - [string] folder where shape models are stored
 %
 % Outputs:
 %   models - [struct] contains the shape Model
@@ -34,18 +34,18 @@ function models = trainShape(files,collector,params,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 28-Apr-2013
+% Last Revision: 30-Apr-2013
 
 % generates a default filename out of the set of the trainings set filenames
 h = hash([files.name],'MD5');
-options = setDefaultShape(options,params,files);
+options = setShapeDefaults(options,params,files);
 
 if options.loadShape
 	tic;
-	if isfield(options,'loadShapeName') h = options.loadShapeName; eNd
+	if isfield(options,'loadShapeName') h = options.loadShapeName; end
 
-	if exist(sprintf('%s/%s.mat',options.shapePriorFolder,h),'file')
-		load(sprintf('%s/%s.mat',options.shapePriorFolder,h));
+	if exist(sprintf('%s/%s.mat',options.shapeFolder,h),'file')
+		load(sprintf('%s/%s.mat',options.shapeFolder,h));
 	else
 		error(sprintf('File %s does not exist, specify a valid filename (via options.loadShapeName).',h));
 	end
@@ -55,13 +55,19 @@ if options.loadShape
 		error(sprintf('Model containts %d regions, but %d are set via options',size(models.columnsShape,1),collector.options.numRegionsPerVolume));
 	end
 
+	% in case the transition matrices are not stored in the model to save storage
+	if ~isfield(models,'pTransV')
+		models = preCalcTransitionMatrices(collector,models);
+	end
+
 	printMessage(sprintf('... loaded saved shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);
 else
 	% fetch the ground truth for files
 	[data mu Sigma] = extractShapeModel(files,collector);
 	printMessage(sprintf('... train shape prior model (may take several minutes) ... \n'),1,collector.options.verbose);
 	tic;
-	% ******* PPCA *********, see Tipping et al, 1999
+
+	% perform PPCA (see the book 'Pattern Recognition' by Bishop for details)
 	[V D] = eig(Sigma); % eigendecomposition of the covariance matrix 
 	D = diag(D);
 	% estimate for sigma^2 is the average of the disregarded eigenvalues
@@ -71,30 +77,27 @@ else
 	% add parameters to the model struct
 	models.mu = mu'; models.WML = WML; models.sigmaML = sigmaML; models.columnsShape = collector.options.columnsShape;
 	clear D V Sigma
-	% ********** end PPCA **********
 
-	numBounds = length(collector.options.EdgesTrain); 
-	models.pTransV = cell(1,collector.options.numRegionsPerVolume);
-	numColumnsShape = cellfun('length',collector.options.columnsShape);
 	% pre-calculate the shape prior for the columnwise graphical models to speed up prediction
-	for region = 1:collector.options.numRegionsPerVolume
-		numColumns = length(collector.options.columnsShape{region});
-		pTransTmp = cell(numColumns,numBounds);
-		for i = 1:numColumns
-			for j = 2:numBounds
-				idx_a = i + (j-2)*numColumns + numBounds*sum(numColumnsShape(1:region-1));
-				idx_b = idx_a + numColumns;
-				P = inv(models.WML([idx_a idx_b],:)*models.WML([idx_a idx_b],:)' + eye(2)*models.sigmaML);
-				pTransTmp{i,j} = sparse(getCondTransMatrix([models.mu(idx_a) models.mu(idx_b)]',P,collector.options.Y));
-			end
-		end
-		models.pTransV{region} = pTransTmp;
-	end
+	models = preCalcTransitionMatrices(collector,models); 
+
+	% save the trained shape model as matfile
 	if options.saveShape
-		if isfield(options,'saveShapeName') h = options.saveShapeName; end
-		save(sprintf('%s/%s.mat',options.shapePriorFolder,h),'models','-v7.3')
-		printMessage(fprintf('Stored shape model for later usage in %s\n',sprintf('%s/%s.mat',options.shapePriorFolder,h)),1,collector.options.verbose);
+		h = options.saveShapeName;
+		% save all model components
+		if ~options.saveCompressedModel
+			save(sprintf('%s/%s.mat',options.shapeFolder,h),'models','-v7.3');
+		% reduce the required storage by not saving the transition matrices but calculate them upon loading the model
+		else
+			pTransV = models.pTransV;
+			models = rmfield(models,'pTransV');
+			save(sprintf('%s/%s.mat',options.shapeFolder,h),'models','-v7.3');
+			models.pTransV = pTransV;
+		end
+		printMessage(fprintf('Stored shape model for later usage in %s\n',sprintf('%s/%s.mat',options.shapeFolder,h)),1,collector.options.verbose);
 	end
 
 	printMessage(sprintf('... trained shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);
+end
+
 end

@@ -12,7 +12,7 @@ function matrix = getCondTransMatrix(mu,Prec,numRows);
 % Outputs:
 %   matrix - [matrix](numRowsxnumRows) transition matrix for p(a|b) 
 %
-% See also: trainShape, setDefaultShape
+% See also: trainShape, setShapeDefaults
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com

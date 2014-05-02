@@ -1,30 +1,32 @@
 function testData = collectTestData(file,options)
-% trnData - draws patches from a set of training images for training the apperance model 
+% collectTestData - draws patches from a set of training images for training the apperance model 
+%
+% Syntax:
+%   testData = collectTestData(file,options)
 % 
 % Inputs:
 %   files - [struct] list of files
 %       .name - [string] the filename
-%   options -[struct]
-%       .BScanRegions  - [matrix](2xn) n subdivisions of the B-Scan; each row holds x and y coordinates; 
-%       .LayersPred    - [array] indices of layers to predict; should coincide with .LayersTrain
-%       .EdgesPred     - [array] indices of edges to predict; should coincide with .EdgesTrain
-%       .Y             - [int] height of the BScan
-%       .height        - [int] patch height
-%       .width         - [int] patch width
+%   options - [struct] holds options for fetching patches
+%       .BScanRegions - [matrix](2xn) n subdivisions of the B-Scan; each row holds x and y coordinates; 
+%       .LayersPred   - [array] indices of layers to predict; should coincide with .LayersTrain
+%       .EdgesPred    - [array] indices of edges to predict; should coincide with .EdgesTrain
+%       .Y            - [int] height of the BScan
+%       .height       - [int] patch height
+%       .width        - [int] patch width
 %
 % Outputs:
-%   testData - [struct]
-%     .data     - 
-%     .idx 
-%     .classID
+%   testData - [struct] holds different matrices containing patches from the test scan
+%     .data    - [matrix]
+%     .idx     - [matrix] 
+%     .classID - [array]
 %
-% See also: collectTrnData
-% Calls: fetchPatches
+% See also: collectTrnData, setCollectorDefaults
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 06-Dec-2013
+% Last Revision: 02-May-2014
 
 pw = ([options.height options.width]-1)/2;
 [a filename] = fileparts(file.name);

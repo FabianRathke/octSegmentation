@@ -22,13 +22,15 @@ function B0 = loadData(filename,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 26-Feb-2014
 
+fileType = {'','.mat'};
+
 if strcmp(options.loadRoutineData,'spectralis')
-	load([options.folder_data filename '.mat'],sprintf('B%d',options.labelID));
+	load([options.folder_data filename fileType{strcmp(filename(end-3:end),'.mat')}],sprintf('B%d',options.labelID));
 	eval(sprintf('B0 = B%d;',options.labelID));
 	B0(B0>10) = 0;
 	B0 = sqrt(sqrt(B0));
 elseif strcmp(options.loadRoutineData,'AMDDataset')
-	load([options.folder_data filename],'images');
+	load([options.folder_data filename fileType{strcmp(filename(end-3:end),'.mat')}],'images');
 	B0 = squeeze(images(:,:,options.labelID));
 else
 	error('Please specify a valid routine for fetching data in collector.options.loadRoutineData');

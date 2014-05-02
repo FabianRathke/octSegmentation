@@ -48,7 +48,6 @@ function labelTool(filename,collector,restore)
 close all;
 % load image data
 saveFileName = sprintf('%s%s_%d_coordinates.mat',collector.options.saveDir,strrep(filename,'*.mat',''),collector.options.labelID);
-collector.options.verbose = 1; collector.options.clip = 0;
 
 % load the B-Scan
 B0 = loadData(filename,collector.options);
@@ -87,6 +86,7 @@ if restore
 			points = Data_save.points_save;
 			interpolations = Data_save.interpolation;
 		end
+		fprintf('Restored previously created ground truth\n');
 
 		clear Data_save;
 	else
@@ -99,6 +99,7 @@ if restore
 			points(i).time(:,1:length(positions)) = repmat(clock',1,length(positions));
 			points(i).order = 1:length(positions);
 		end
+		fprintf('Loaded ground truth provided with the data set\n');
 	end
 
 	% initialize boundaries
@@ -146,8 +147,10 @@ function mouseClick(src,eventdata)
 		end
 	elseif strcmp(modus,'crop_image_upper')
 		upper_crop = round(point(1,2));
-		for i = 1:length(points)
-			points(i).coordinates(2,:) = points(i).coordinates(2,:) - upper_crop + 1;
+		if ~isempty(points(current_line).coordinates)
+			for i = 1:length(points)
+				points(i).coordinates(2,:) = points(i).coordinates(2,:) - upper_crop + 1;
+			end
 		end
 		updateInterpolationAll();
 
@@ -246,18 +249,20 @@ function keyPress(src,eventdata)
 		end
 
 		if strcmp(eventdata.Key,'n')
-			set(line_handles(current_line),'color','yellow');
-			set(point_handles(current_line),'color','yellow','MarkerFaceColor','yellow');
-			checkLines();
-			current_line = length(points) + 1;
-			points(current_line).coordinates = [];
-			points(current_line).time = [];
-			points(current_line).order = [];
-			deactivatePoint();
+			if ~isempty(points(current_line).coordinates)
+				set(line_handles(current_line),'color','yellow');
+				set(point_handles(current_line),'color','yellow','MarkerFaceColor','yellow');
+				checkLines();
+				current_line = length(points) + 1;
+				points(current_line).coordinates = [];
+				points(current_line).time = [];
+				points(current_line).order = [];
+				deactivatePoint();
 
-			modus = 'add_points';
-			set(t,'String','Add Modus');
-			fprintf('inserted line %d\n',current_line);
+				modus = 'add_points';
+				set(t,'String','Add Modus');
+				fprintf('inserted line %d\n',current_line);
+			end
 		end
 
 		if strcmp(eventdata.Key,'r')
@@ -434,7 +439,7 @@ function keyPress(src,eventdata)
 				points_save(i).coordinates(2,:) = interpolation(i,round(points_save(i).coordinates(1,:)));
 			end
 
-			fprintf('%s\n',saveFileName);
+			fprintf('Saved labels in %s\n',saveFileName);
 			save(saveFileName,'interpolation','points_save');
 			figure
 			imagesc(B0); colormap gray; hold on;
@@ -527,19 +532,23 @@ function addPoint(point)
 end
 
 function updateInterpolation()
-    interpolations(current_line,:) = interp1(points(current_line).coordinates(1,:),points(current_line).coordinates(2,:),1:size(B0,2),'pchip');
-    set(line_handles(current_line),'YData',interpolations(current_line,:));
-    set(point_handles(current_line),'XData',points(current_line).coordinates(1,:),'YData',points(current_line).coordinates(2,:));
-	activatePoint();
+	if ~isempty(points(current_line).coordinates)
+		interpolations(current_line,:) = interp1(points(current_line).coordinates(1,:),points(current_line).coordinates(2,:),1:size(B0,2),'pchip');
+		set(line_handles(current_line),'YData',interpolations(current_line,:));
+		set(point_handles(current_line),'XData',points(current_line).coordinates(1,:),'YData',points(current_line).coordinates(2,:));
+		activatePoint();
+	end
 end
 
 function updateInterpolationAll()
-	for i = 1:length(points)
-		interpolations(i,:) = interp1(points(i).coordinates(1,:),points(i).coordinates(2,:),1:size(B0,2),'pchip');
-    	set(line_handles(i),'YData',interpolations(i,:));
-    	set(point_handles(i),'XData',points(i).coordinates(1,:),'YData',points(i).coordinates(2,:));
+	if ~isempty(points(current_line).coordinates)
+		for i = 1:length(points)
+			interpolations(i,:) = interp1(points(i).coordinates(1,:),points(i).coordinates(2,:),1:size(B0,2),'pchip');
+			set(line_handles(i),'YData',interpolations(i,:));
+			set(point_handles(i),'XData',points(i).coordinates(1,:),'YData',points(i).coordinates(2,:));
+		end
+		activatePoint();
 	end
-	activatePoint();
 end
 
 function activateLine(a)

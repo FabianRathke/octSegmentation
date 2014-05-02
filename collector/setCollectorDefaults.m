@@ -1,5 +1,5 @@
 function options = setCollectorDefaults(options,params,files,folderData,folderLabels)
-% setCollectorDefaults - sets defauls values for variables used in the collectors; variables from params, used in a CV, can overwrite the standard values e.g. for the patch size
+% setCollectorDefaults - sets defauls values for variables used for collecting training and/or testdata and some global variables used for trainin and prediction
 %  
 % Syntax:	
 %   options = setCollectorDefaults(options,params,files,folderData,folderLabels)
@@ -27,7 +27,7 @@ function options = setCollectorDefaults(options,params,files,folderData,folderLa
 %       .saveAppearanceTerms - [boolean] return appearance model predictions for each pixel. Default: [0]
 %       .verbose             - [int] the amount of printed information while runnning the programm (0 (nothing) - 2 (maximal)). Default: [1]
 %   params       - [struct] holds params used for example in cross-validation 
-%   files        - [struct] training set, output of Matlabs dir function
+%   files        - [struct] training set, output of Matlabs dir function; if empty some defaults will not be set
 %   folderData   - [string] path with mat-files containing the OCT scans 
 %   folderLabels - [string] path with mat-files containing ground truth
 %
@@ -39,7 +39,7 @@ function options = setCollectorDefaults(options,params,files,folderData,folderLa
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 18-Dec-2013
+% Last Revision: 30-Apr-2013
 
 options.folder_data = folderData;
 options.folder_labels = folderLabels;
@@ -77,6 +77,7 @@ end
 % ids for single scans of a volume  (used in functions loadLabels and loadData)
 if ~isfield(options,'labelIDs') options.labelIDs = zeros(length(files),options.numRegionsPerVolume); end
 
+% enables to clip the width of B-Scans; i.e. useful for volumnes to remove the part containing the nerve head
 if ~isfield(options,'clip') 
 	options.clip = 0; 
 else
@@ -87,32 +88,44 @@ else
 	end
 end
 
-% pull a sample scan and set its dimensions
-options.labelID = options.labelIDs(1);
-B0 = loadData(files(1).name,options);
-if isfield(options,'clipRange')
-	options.X = options.clipRange(2) - options.clipRange(1) + 1;
-else
-	options.X = size(B0,2);
+if length(files) > 0
+	% pull a sample scan and set its dimensions
+	options.labelID = options.labelIDs(1);
+	B0 = loadData(files(1).name,options);
+	if isfield(options,'clipRange')
+		options.X = options.clipRange(2) - options.clipRange(1) + 1;
+	else
+		options.X = size(B0,2);
+	end
+	options.Y = size(B0,1);
+
+	% pull sample ground truth
+	segmentation = loadLabels(files(1).name,options);
+	options = rmfield(options,'labelID');
+
+	numBoundaries = size(segmentation,1); numLayers = numBoundaries + 1;
+	% edges and layers used for training and prediction
+	options.EdgesTrain = 1:numBoundaries;
+	options.LayersTrain = 1:numLayers;
+	options.numLayers = length(options.LayersTrain);
+	options.EdgesPred = 1:numBoundaries;
+	options.LayersPred = 1:numLayers;
+
+	% can be used to divide each B-Scan into regions, which use seperate appearance models
+	if ~isfield(options,'BScanRegions') options.BScanRegions = [1 options.X]; end
+	options.numRegionsPerBScan = size(options.BScanRegions,1);
+	
+	% which columns are part of the shape prior p(b) and are used for q_b (allows for sparse representations; intermediate columns are interpolated);
+	% can be set for each region within the volume separately
+	if ~isfield(options,'columnsShape') 
+		options.columnsShape = cell(1,options.numRegionsPerVolume);
+		for i = 1:options.numRegionsPerVolume
+			options.columnsShape{i} = round(linspace(1,options.X,options.X/2));
+		end
+	end
+	% which columns are to be predicted, i.e. are used in q_c
+	if ~isfield(options,'columnsPred') options.columnsPred = round(linspace(1,options.X,options.X/2)); end
 end
-options.Y = size(B0,1);
-
-% enables to clip the width of B-Scans; i.e. useful for volumnes to remove the part containing the nerve head
-
-% pull sample ground truth
-segmentation = loadLabels(files(1).name,options);
-options = rmfield(options,'labelID');
-
-numBoundaries = size(segmentation,1); numLayers = numBoundaries + 1;
-% edges and layers used for training and prediction
-options.EdgesTrain = 1:numBoundaries;
-options.LayersTrain = 1:numLayers;
-options.EdgesPred = 1:numBoundaries;
-options.LayersPred = 1:numLayers;
-
-% can be used to divide each B-Scan into regions, which use seperate appearance models
-if ~isfield(options,'BScanRegions') options.BScanRegions = [1 options.X]; end
-options.numRegionsPerBScan = size(options.BScanRegions,1);
 
 % default behavior is to perform all calculations on the CPU
 if ~isfield(options,'calcOnGPU') options.calcOnGPU = 0; end
@@ -125,33 +138,17 @@ else
 	options.dataTypeCast = 'double';
 end
 
-% most probably deprecated (05-12-2013)
-%if ~isfield(options,'columns')
-%	options.columns = round(linspace(1,options.X,options.X));
-%end
-
 % number of patches to draw for training; per class and file
 if ~isfield(options,'numPatches') options.numPatches = 30; end
 % substract the patch mean from each patch; make appearance terms less vulnerable to variations of intensity between and within OCT scans
 if ~isfield(options,'centerPatches') options.centerPatches = 1; end
 
 
-% which columns are part of the shape prior p(b) and are used for q_b (allows for sparse representations; intermediate columns are interpolated);
-% can be set for each region within the volume separately
-if ~isfield(options,'columnsShape') 
-	options.columnsShape = cell(1,options.numRegionsPerVolume);
-	for i = 1:options.numRegionsPerVolume
-		options.columnsShape{i} = round(linspace(1,options.X,options.X/2));
-	end
-end
-% which columns are to be predicted, i.e. are used in q_c
-if ~isfield(options,'columnsPred') options.columnsPred = round(linspace(1,options.X,options.X/2)); end
-
 % patches are drawn from the center of their layer
 if ~isfield(options,'patchPosition') options.patchPosition = 'middle'; end
 
 % print Timings during prediction
 if ~isfield(options,'printTimings') options.printTimings = 0; end
-options.numLayers = length(options.LayersTrain);
 
+% the results struct will also contain the pixel wise probabilities for each appearance model
 if ~isfield(options,'saveAppearanceTerms') options.saveAppearanceTerms = 0; end

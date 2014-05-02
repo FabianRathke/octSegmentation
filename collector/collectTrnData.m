@@ -7,7 +7,7 @@ function trnData = collectTrnData(files,options)
 % Inputs:
 %   files - [struct] list of files
 %     .name	- [string] the filename
-%   options - [struct]
+%   options - [struct] holds options for fetching patches
 %     .BScanRegions   - [matrix](2xn) n subdivisions of the B-Scan; each row holds x and y coordinates; 
 %     .LayersTrain    - [array] indices of layers to train
 %     .EdgesTrain     - [array] indices of edges to train
@@ -21,13 +21,12 @@ function trnData = collectTrnData(files,options)
 % Outputs:
 %   trnData - [struct]  
 %
-% See also: collectTestData
-% Calls: loadLabels, loadData, wrapperGetRaster, getAugmentedImage, setCollectorDefaults
+% See also: collectTestData, setCollectorDefaults
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 05-Dec-2013
+% Last Revision: 02-May-2014
 
 pw = ([options.height options.width]-1)/2; % number of pixels left and right of the center column in each patch
 

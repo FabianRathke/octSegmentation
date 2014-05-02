@@ -35,7 +35,8 @@ function output = predAppearance(files,collector,params,models,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 10-Dec-2013
 
-options = setDefaultAppearance(options);
+% defaults are defined in local function, see below
+options = setAppearanceDefaults(options);
 numClasses = models(1).numClasses;
 
 output.prediction = cell(length(files),collector.options.numRegionsPerVolume);
@@ -102,7 +103,7 @@ end
 end
 
 % set defaults
-function options = setDefaultAppearance(options)
+function options = setAppearanceDefaults(options)
 if (~isfield(options,'normalizeDataTerm'))
     options.normalizeDataTerm = true;
 end

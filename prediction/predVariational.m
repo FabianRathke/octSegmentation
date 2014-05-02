@@ -25,7 +25,7 @@ function output = predVariational(files,collector,params,models,options)
 %     .trueLabels - [cell] pixel-wise labels for all B-Scans
 %     .prediction - [cell] pixel-wise probabilities for all classes and B-Scans
 %
-% See also: predAppearance, setDefaultsSegmentation
+% See also: predAppearance, setSegmentationDefaults
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
@@ -67,8 +67,8 @@ for file = 1:length(files)
 		output.prediction_init{file,volRegion} = q_c_plot;
 		error_init = error_init + sum(sum(abs(output.prediction_init{file,volRegion}(:,columnsShapePred{volRegion})-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion}))))/(numColumnsShape(volRegion)*numBounds);
 		if options.plotting
-			fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(volRegion));
-			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(volRegion)))
+			fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(i,volRegion));
+			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(i,volRegion)))
 		end
 	end
 	fprintf('Initial unsigned error: %.3fpx\n',error_init/numVolRegions);
@@ -99,7 +99,6 @@ for file = 1:length(files)
 		end
 		fprintf('Mean change: %.3fpx\n',change_per_iteration(iter));
 
-		%change_per_iteration(iter) = mean(mean(abs(squeeze(boundaries(iter,:,:))-squeeze(old_boundaries)))); fprintf('Mean change in pixel: %.3f\n',change_per_iteration(iter));
 		for volRegion = 1:numVolRegions
 			if options.detailedOutput
 				idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
