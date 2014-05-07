@@ -43,7 +43,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	}
 	int numBounds = mxGetN(prhs[0])/numColsShapeCS[numVolRegions];
 	plhs[0] = mxCreateDoubleMatrix(1,numRows*numBounds*numVolRegions*numColumnsPred,mxREAL);
-	double *q_c= mxGetPr(plhs[0]);
+	double *q_c = mxGetPr(plhs[0]);
 	
 	int i,j,k,i1,i2,vol;
 	double alpha[numRows*numBounds];
@@ -125,7 +125,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 					if (condQB[idxCondA + i1] != 0 || condQB[idxCondB + i1] != 0) {
 						idxNonZeroAlpha[k][idxCounterB] = i1; idxCounterB++;
 						tmpA = tmpB = 0;
-						/* iterates over the row of transition matrices; corresponds to idxNonZeroB in matlab */
+						/* iterates over the rows of transition matrices; corresponds to idxNonZeroB in matlab */
 						for (idxCounterA = 0; idxCounterA < numNonZeroIdx[k-1]; idxCounterA++) {
 							i2 = idxNonZeroAlpha[k-1][idxCounterA];
 							if (i2 <= i1 && preCalcA !=0 && preCalcB !=0) {
@@ -135,18 +135,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 								/* printf("%d: %.2f\n",(int)(-valA*10 +0.5),valA); */
 								tmpA += (valA < -limit) ? preCalcA[i2]*hashTable[(int)(-valA*100 +0.5)] : preCalcA[i2]*exp(valA);
 								tmpB += (valB < -limit) ? preCalcB[i2]*hashTable[(int)(-valB*100 +0.5)] : preCalcB[i2]*exp(valB);
-								
-/*								tmpA += preCalcA[i2]*exp(-0.5*Sigma_inv_c[idxA]*pow(i1 + 1 - mu_c[idxANumRows + i2],2));
-								tmpB += preCalcB[i2]*exp(-0.5*Sigma_inv_c[idxB]*pow(i1 + 1 - mu_c[idxBNumRows + i2],2)); */
 							}
 						}
 						alpha[numRows*k + i1] = prediction[idxPred*numRows*numBounds + k*numRows + i1]*(colAFac[idxPred]*tmpA + colBFac[idxPred]*tmpB);
 						alphaTotal += alpha[numRows*k + i1];
 					}
 				}
-
 				c[k] = alphaTotal;
-				/* time_elapsed_alpha += (double) ((double) (end - begin) / (double) CLOCKS_PER_SEC);*/
 
 				/* copy idxNonZeroB onto idxNonZeroA and normalize alpha */
 				for (i=0;i<idxCounterB; i++) {
@@ -154,7 +149,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				}
 				numNonZeroIdx[k] = idxCounterB;
  			}
-		
 
 			/* init beta */
 			idxQC = (vol*(numColumnsPred*numBounds) + j*numBounds)*numRows;
@@ -200,8 +194,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 							/* printf("%d: %.2f\n",(int)(-valA*10 +0.5),valA); */
 							tmpA += (valA < -limit) ? preCalcA[i2]*hashTable[(int)(-valA*100 +0.5)] : preCalcA[i2]*exp(valA);
 							tmpB += (valB < -limit) ? preCalcB[i2]*hashTable[(int)(-valB*100 +0.5)] : preCalcB[i2]*exp(valB);
-							/*tmpA += preCalcA[i2]*exp(-0.5*factorsPrec[idxA]*pow(i2 + 1 - mu_a_b[idxANumRows + i1] ,2));
-							tmpB += preCalcB[i2]*exp(-0.5*factorsPrec[idxB]*pow(i2 + 1 - mu_a_b[idxBNumRows + i1] ,2)); */
 						}
 					}
 					beta[idx + i1] = (colAFac[idxPred]*tmpA + colBFac[idxPred]*tmpB)/c[k+1];
@@ -213,7 +205,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 					q_c[idxQC + idx + idxNonZeroAlpha[k][idxCounter]] /= q_c_total;
 				}
 			}
-			/* time_elapsed_beta += (double) ((double) (end - begin) / (double) CLOCKS_PER_SEC); */
 		}
 	}
 }

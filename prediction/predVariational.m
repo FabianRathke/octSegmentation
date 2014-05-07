@@ -23,19 +23,21 @@ function output = predVariational(files,collector,params,models,options)
 % Outputs:
 %   output - [struct]
 %     .trueLabels - [cell] pixel-wise labels for all B-Scans
-%     .prediction - [cell] pixel-wise probabilities for all classes and B-Scans
+%     .prediction - [cell] predicted segmentations for all B-Scans
+%     .prediction_init - [cell] segmentation after initialization for all B-Scan
+%     .columnsPred - [array] columns for which predictions are produced
 %
 % See also: predAppearance, setSegmentationDefaults
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 29-Apr-2014
+% Last Revision: 05-May-2014
 
 initSegmentation;
 
 for file = 1:length(files)
-	fprintf('%s\n',files(file).name);
+	fprintf('... make predictions for ** %s **\n',files(file).name);
 	
 	if options.plotting
 		% check folder to store plots for current file
@@ -130,9 +132,13 @@ for file = 1:length(files)
 			end
 			% calc the terms of the objective function
 			if options.calcFuncVal
-				objFuncValQ_C;
+				calcFuncVals;
 				output.funcVal(file) = funcVal;
 			end
+
+			% clean after mex-functions
+			clear mex
+
 			break
 		end
 	end

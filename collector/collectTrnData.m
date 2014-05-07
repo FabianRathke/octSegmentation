@@ -19,14 +19,18 @@ function trnData = collectTrnData(files,options)
 %     .numPatches     - [int] number of patches to be drawn per file and appearance class 
 %
 % Outputs:
-%   trnData - [struct]  
+%   trnData - [struct]
+%     .data    - [matrix] the actual patches drawn for training
+%     .classID - [array] classID for each patch; assigns IDs to different layers (1:numLayers) and boundaries (1:numBoundaries)
+%     .type    - [array] 1 or 2 for each patch; encoding patches of layers (=1) and boundaries (=2)
+%     .idx     - [idx] the position of each patch (1-d indexing)
 %
 % See also: collectTestData, setCollectorDefaults
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 02-May-2014
+% Last Revision: 04-May-2014
 
 pw = ([options.height options.width]-1)/2; % number of pixels left and right of the center column in each patch
 

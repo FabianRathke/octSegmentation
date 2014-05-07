@@ -51,7 +51,7 @@ end
 options = checkFields(options,params,0.1,'alpha');
 
 if ~isfield(options,'threshold')
-	options.threshold = 0.01;
+	options.threshold = 0.05;
 end
 
 if ~isfield(options,'calcFuncVal')

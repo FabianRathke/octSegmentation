@@ -2,7 +2,7 @@ function Raster = wrapperGetRaster(border,dim)
 % loadData - calls getRaster.c, takes a matrix of boundary positions and converts this into a pixel-wise labeling for the B-scan
 %
 % Inputs:
-%   border - [matrix] filename of the matfile to load
+%   border - [matrix] holds segmentation of B-scan
 %   dim    - [array](2) dimension of the B-scan
 %
 % Outputs:

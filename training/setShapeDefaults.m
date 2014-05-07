@@ -29,7 +29,7 @@ function options = setShapeDefaults(options,params,files)
 options = checkFields(options,params,20,'numModes');
 
 if ~isfield(options,'shapeFolder')
-	options.shapePriorFolder = [getuserdir,'/shapemodels'];
+	options.shapeFolder = [getuserdir,'/shapemodels'];
 	% check if folder exists
 	if ~exist(options.shapeFolder)
 		mkdir(options.shapeFolder);

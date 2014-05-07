@@ -4,12 +4,13 @@ function patches = fetchPatches(filename,idxSet,options)
 % Inputs:
 %   filename - [string] filename of the matfile to load
 %   options  - [struct]
-%       .centerPatches - [boolean] substract the mean of each patch
-%       .height        - [int] patch height in px (has to odd number)
-%       .width         - [int] patch width in px
+%      .centerPatches - [boolean] substract the mean of each patch
+%      .height        - [int] patch height in px (has to odd number)
+%      .width         - [int] patch width in px
 %
 % Outputs:
-%   B0 - [matrix] the B-Scan 
+%   patches - [struct]
+%      .data - [matrix] contains the patches
 %
 % See also: collectTrnData, collectTestData
 % Calls: loadLabels, loadData, wrapperGetRaster, getAugmentedImage

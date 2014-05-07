@@ -13,17 +13,20 @@ function models = trainAppearance(files,collector,params,options)
 %     .options.preprocessing
 %   params    - [struct] holds params used for example in cross-validation 
 %   options   - [struct] holds options used within the appearance function
-%     .appearanceModel - [string] name of the function to call
+%     .appearanceModel   - [string] name of the function to call
+%     .priorVolumesPaper - [boolean] assigns a specific non-uniform prior distribution to the appearance models; see documentation.pdf and the source code for details
 %
 % Outputs:
 %   models - [struct] contains the appearance models, 3-dim struct
 %
-% See also: trainGlasso, trainShape
+% See also: setAppearanceDefaults, trainGlasso, trainShape
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 28-Apr-2014
+% Last Revision: 05-May-2014
+
+options = setAppearanceDefaults(options,params,files);
 
 tstart = tic;
 models = struct();
@@ -48,6 +51,10 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 		% call the appearance model set by the user	
 		appearanceModel = options.appearanceModel(trainData(regionBScan),ids,params,options);
 	    models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
+		
+		if options.priorVolumesPaper
+			models = setPriors(models,ids,collector,regionVolume,regionBScan);
+		end
 	end
 end
 models(1).numClasses = length(ids);
@@ -62,6 +69,18 @@ names = fieldnames(appearanceModel);
 for i = 1:length(names)
 	for j = 1:length(appearanceModel)
 		eval(sprintf('models(regionVolume,regionBScan,j).%s = appearanceModel(j).%s;',names{i},names{i}));
+	end
+end
+
+end
+
+% restores specific non-uniform priors for the appearance models as incorrectly used in our publication for the 3-D dataset
+function models = setPriors(models,ids,collector,regionVolume,regionBScan)
+for j = 1:length(ids)
+	if j <= collector.options.numLayers
+		models(regionVolume,regionBScan,j).prior = 1/2*(sum(log(eig(models(regionVolume,regionBScan,1).P))) - sum(log(eig(models(regionVolume,regionBScan,j).P))));
+	else
+		models(regionVolume,regionBScan,j).prior = 1/2*(sum(log(eig(models(regionVolume,regionBScan,2).P))) - sum(log(eig(models(regionVolume,regionBScan,j).P))));
 	end
 end
 

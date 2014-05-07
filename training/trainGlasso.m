@@ -1,24 +1,32 @@
 function model = trainGlasso(trainData,ids,params,options)
-% trainGlasso - learns a Gaussian distributions as appearanceModels for each appearance class
+% trainGlasso - learns a Gaussian distributions as appearanceModels for each appearance class;
+%               estimates are regularized by learning sparse precision matrices; details can be found
+%               in the paper "Sparse inverse covariance estimation with the graphical lasso" by 
+%               Friedman et al, 2008.
 %
 % Syntax:
 %   model = trainGlasso(data,params,options)
 %
 % Inputs:
 %   trainData - [matrix](numPatches,dimData) patch information from the training set for one class
-%   params    - [struct] 
-%     .glasso - [float] controls the sparsity of the precision matrix, bigger values correspond to sparser matrices
-%   options   - [struct] options struct (currently no options in use)
+%   ids - [array] a vector of classIDs for which appearance models will be created; classID set in collectTrnData
+%   params - [struct] 
+%      .glasso - [float] controls the sparsity of the precision matrix, bigger values correspond to sparser matrices
+%   options - [struct] options struct
+%      .glasso - [float] same as above
 %
 % Outputs:
-%   model - [struct] 
+%   model - [struct] structure with one entry for each boundary/appearance; holds parameters of normal distribtions
+%      .S          - [matrix] covarince matrix
+%      .P          - [matrix] precision matrix (sparse)
+%      .class_mean - [array] mean patch
 %
-% See also: trainAppearance
+% See also: trainAppearance, collectTrnData
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 13-Dec-2013
+% Last Revision: 04-May-2014
 
 options = setDefaultOptions(params,options);
 

@@ -97,4 +97,3 @@ if collector.options.calcOnGPU
 	X = colon(1,1,numRows,GPUsingle);
 	X = X(ones(1,numColumnsShapeTotal*numBounds),:);
 end
-fprintf('... make predictions for\n');

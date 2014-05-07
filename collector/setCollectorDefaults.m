@@ -129,6 +129,10 @@ end
 
 % default behavior is to perform all calculations on the CPU
 if ~isfield(options,'calcOnGPU') options.calcOnGPU = 0; end
+if options.calcOnGPU
+	GPUstart;
+end
+
 % the datatype for those variables that are moved onto the GPU has to be variable
 if options.calcOnGPU
 	options.dataType = 'GPUsingle';

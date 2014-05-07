@@ -44,4 +44,4 @@ for region = 1:collector.options.numRegionsPerVolume
 	model.pTransV{region} = pTransTmp;
 end
 
-printMessage(sprintf('... calculated transition matrices %.2f s ... \n',toc(preCalcMat)),1,collector.options.verbose);
+%printMessage(sprintf('... calculated transition matrices %.2f s ... \n',toc(preCalcMat)),1,collector.options.verbose);

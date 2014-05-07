@@ -5,9 +5,10 @@ function options = setAppearanceDefaults(options,params,files)
 %   options = setAppearanceDefaults(options,params)
 %
 % Inputs:
-%   options   - [struct] options struct
-%     .appearanceModel - [function-handle] points to the method used for training the appearance models
-%   params    - [struct] holds params used for example in cross-validation 
+%   options - [struct] options struct
+%     .appearanceModel   - [function-handle] points to the method used for training the appearance models
+%     .priorVolumesPaper - [boolean] assigns a specific non-uniform prior distribution to the appearance models; see documentation.pdf and the source code for details
+%   params  - [struct] holds params used for example in cross-validation 
 %
 % Outputs:
 %   options - [struct] options struct augmented by default values for unset fields
@@ -17,8 +18,12 @@ function options = setAppearanceDefaults(options,params,files)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 29-Apr-2014
+% Last Revision: 05-May-2014
 
 if ~isfield(options,'appearanceModel')
 	options.appearanceModel = @trainGlasso;
+end
+
+if ~isfield(options,'priorVolumesPaper')
+	options.priorVolumesPaper = 0;
 end
