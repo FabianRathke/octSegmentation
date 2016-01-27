@@ -67,13 +67,18 @@ for file = 1:length(files)
 
 		old_boundaries(volRegion,:,:) = q_c_plot;
 		output.prediction_init{file,volRegion} = q_c_plot;
-		error_init = error_init + sum(sum(abs(output.prediction_init{file,volRegion}(:,columnsShapePred{volRegion})-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion}))))/(numColumnsShape(volRegion)*numBounds);
+		if collector.options.loadLabels
+			error_init = error_init + sum(sum(abs(output.prediction_init{file,volRegion}(:,columnsShapePred{volRegion})-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion}))))/(numColumnsShape(volRegion)*numBounds);
+			fprintf('Initial unsigned error: %.3fpx\n',error_init/numVolRegions);
+		else 
+			error_init = 0;
+		end
+
 		if options.plotting
-			fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(i,volRegion));
-			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(i,volRegion)))
+			fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(file,volRegion));
+			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(file,volRegion)))
 		end
 	end
-	fprintf('Initial unsigned error: %.3fpx\n',error_init/numVolRegions);
 	
 	% calculates the constant contributions of the shape prior to the omega-matrices
 	calcShapeTerms;
@@ -111,13 +116,13 @@ for file = 1:length(files)
 
 			if isnan(unsigned_error(iter,:))
 				fprintf('NaN detected, aborting prediction\n');
-				iter = options.iterations;
 				boundaries(iter,:,:) = old_boundaries;
+				break;
 			end	
 		end
 		fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));
 
-		% after convergence, save the final result and quit the iteration
+		% after convergence, save the final result and quit the optimization
 		if (iter == options.iterations || (iter > 1 && change_per_iteration(iter) < options.threshold))
 			output.columnsPred = collector.options.columnsPred;
 			for volRegion = 1:numVolRegions

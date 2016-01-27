@@ -11,17 +11,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	/* dimension of the scan B0 */
 	double* dim = mxGetPr(prhs[1]);
 
-	plhs[0] = mxCreateDoubleMatrix(dim[0],dim[1],mxREAL);
-
-	/* output Raster matrix */
-	double *Raster = mxGetPr(plhs[0]);
-
+	double* Raster = NULL;
 	int numBorders = mxGetM(prhs[0]);
 	int idxStart,idxEnd;
 
+	plhs[0] = mxCreateDoubleMatrix(dim[0],dim[1],mxREAL);
+	/* output Raster matrix */
+	Raster = mxGetPr(plhs[0]);
+
 	for (j=0; j < (int)dim[1]; j++) {
 		for (i=0;i < numBorders-1; i++) {
-			idxStart = (int)fmax(borders[i + j*numBorders],(float) 0)+1;
+			idxStart = (borders[i + j*numBorders] < 0) ? 1 : borders[i + j*numBorders]+1; 
+			/* idxStart = (int)fmax(borders[i + j*numBorders],(float) 0)+1; */
 			idxEnd = (int)borders[i+1 + j*numBorders];
 			if (idxStart<=idxEnd) {
 				for (k=idxStart;k<=idxEnd;k++) {

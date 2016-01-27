@@ -40,6 +40,7 @@ function models = trainShape(files,collector,params,options)
 h = hash([files.name],'MD5');
 options = setShapeDefaults(options,params,files);
 
+% loads the previously calculated shape prior
 if options.loadShape
 	tic;
 	if isfield(options,'loadShapeName') h = options.loadShapeName; end
@@ -63,7 +64,7 @@ if options.loadShape
 	printMessage(sprintf('... loaded saved shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);
 else
 	% fetch the ground truth for files
-	[data mu Sigma] = extractShapeModel(files,collector);
+	[mu,Sigma,data] = extractShapeModel(files,collector);
 	printMessage(sprintf('... train shape prior model (may take several minutes) ... \n'),1,collector.options.verbose);
 	tic;
 
@@ -77,6 +78,10 @@ else
 	% add parameters to the model struct
 	models.mu = mu'; models.WML = WML; models.sigmaML = sigmaML; models.columnsShape = collector.options.columnsShape;
 	clear D V Sigma
+
+	if options.returnShapeData
+		models.data = data;
+	end
 
 	% pre-calculate the shape prior for the columnwise graphical models to speed up prediction
 	models = preCalcTransitionMatrices(collector,models); 
@@ -95,6 +100,8 @@ else
 			models.pTransV = pTransV;
 		end
 		printMessage(fprintf('Stored shape model for later usage in %s\n',sprintf('%s/%s.mat',options.shapeFolder,h)),1,collector.options.verbose);
+	else
+		printMessage(fprintf('Did not store the shape model in a file\n'),1,collector.options.verbose);
 	end
 
 	printMessage(sprintf('... trained shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);

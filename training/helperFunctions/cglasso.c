@@ -42,7 +42,7 @@ double mean_abs(double* beta, unsigned p) {
 	return ma / (p - 1); /* the other day, drop p - 1 from here and from "diff" */
 }
 
-double clean_zeros(double* zero_m, unsigned p) {
+void clean_zeros(double* zero_m, unsigned p) {
 	/* set_to_zero = repmat(1:p,p,1); */
 	/* if nargin > 3 */
 	/* 	if ~isequal (zero_elements,zero_elements') */
@@ -71,15 +71,16 @@ double clean_zeros(double* zero_m, unsigned p) {
 			*z1 = *z2 = !!*z1 || !!*z2;
 		}
 	}
-	if (diag_warning)
+	if (diag_warning) 
 		mexWarnMsgIdAndTxt("cglasso:warning",
 			"Reset diagonal entry of zero elements matrix");
+
 	if (sparse_warning)
 		mexWarnMsgIdAndTxt("cglasso:warning",
 			"Enforcing symmetry of zero elements matrix");
 }
 
-double copy_zeros(double* zero_ws, double* W, unsigned p) {
+void copy_zeros(double* zero_ws, double* W, unsigned p) {
 	double* W_end = W + p * p;
 	for (; W != W_end; ++W)
 		if (*zero_ws++)
@@ -91,7 +92,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	unsigned i = undefined_u; /* index */
 	unsigned j = undefined_u; /* index */
 	unsigned k = undefined_u; /* index */
-	unsigned n = undefined_u; /* index */
 	const unsigned ret_count = 2;
 	const unsigned arg_count = 5;
 	const unsigned arg_is_matrix[] = { 1, 0, 0, 1, 1 };
@@ -132,6 +132,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	double new_beta = undefined_d;
 	unsigned sparse_P = undefined_u;
 	unsigned sparse_W = undefined_u;
+	int iter;
+	double x;
+	int sign;
 
 	/* first, check if arguments adhere to the input interface */
 	if (nrhs != arg_count)
@@ -262,7 +265,7 @@ DEBUG_INT(sparse_W)*/
 	/* % after one iteration is bigger than the mean abs value of entries of S  */
 	/* %								times 0.001 */
 
-	int iter = 1;
+	iter = 1;
 	while (mean_abs_change > threshold && iter < 50) {
 	iter++;
 
@@ -314,7 +317,7 @@ DEBUG_INT(sparse_W)*/
 					/*    - W_11(k,idx2(k,:))*beta(idx2(k,:))'; */
 					if (sparse_P && a_(zero_betas, j, skip[k], p))
 						continue;
-					double x = a_(S, j, skip[k], p);
+					x = a_(S, j, skip[k], p);
 					for (i = 0; i < p - 2; ++i) {
 						x -= a_(W, skip[k], skip[skip2[i]], p)
 							* beta[skip2[i]];
@@ -322,9 +325,11 @@ DEBUG_INT(sparse_W)*/
 					/* % make soft thresholding */
 					/* beta(k) = sign(x)*max(abs(x)-lambda,0) ... */
 					/* 				/ W_11(k,k); */
-					new_beta = (1 - 2 * !!signbit(x))
+/*					oldCode: new_beta = (1 - 2 * !!signbit(x))
 						* fmax(fabs(x) - lambda, 0)
-						/ a_(W, skip[k], skip[k], p);
+						/ a_(W, skip[k], skip[k], p); */
+					sign = (x>0) ? 1 : -1; 
+					new_beta = (fabs(x)-lambda < 0) ? 0 : sign*(fabs(x)-lambda)/a_(W, skip[k], skip[k], p) ; 
 					old_beta = beta[k];
 					beta[k] = new_beta;
 					/* % compute the difference between the old and the new */
@@ -336,7 +341,7 @@ DEBUG_INT(sparse_W)*/
 				diff /= (p - 1);
 			}
 			/* beta_storage(j,:) = beta; */
-			/* w_12 = W_11*beta';
+			/* w_12 = W_11*beta'; */
 			/* naive matrix multiplication in C, hmm, hmm... */
 			for (i = 0; i < p - 1; ++i) {
 				w_12[i] = 0;

@@ -5,7 +5,13 @@ prediction = zeros(numRows,numClasses,numColumnsPred,numVolRegions);
 for volRegion = 1:numVolRegions
     % load ground truth and the scan itself
 	collector.options.labelID = collector.options.labelIDs(file,volRegion);
-    output.trueLabels{file,volRegion} = loadLabels(files(file).name,collector.options);
+	% load labels if set by the user
+	if collector.options.loadLabels
+		output.trueLabels{file,volRegion} = loadLabels(files(file).name,collector.options);
+	else % otherwise provide some dummy labels
+		output.trueLabels{file,volRegion} = zeros(collector.options.numLayers-1,collector.options.X);
+	end
+
 	if options.plotting
 		eval(sprintf('B%d = loadData(files(file).name,collector.options);',collector.options.labelID));
 	end

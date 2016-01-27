@@ -39,10 +39,10 @@ testData = fetchPatches(filename,idxSet,options);
 testData.idx = int16(idxSet' - pw(ones(1,size(idxSet,2)),:));
 
 % set class to boundary classes where transitions between layers occur (change of index)
-if options.saveAppearanceTerms
-	tmp = testData.classID(2:end)-testData.classID(1:end-1);
-	idx = find(tmp==1);
-	bounds = repmat((numLayers+1):(numLayers+numBounds),1,length(options.columnsPred));
-	testData.classID(idx+1) = testData.classID(idx)+length(options.LayersPred);
-	testData.classID(idx) = testData.classID(idx+1);
-end
+%if options.saveAppearanceTerms
+%	tmp = testData.classID(2:end)-testData.classID(1:end-1);
+%	idx = find(tmp==1);
+%	bounds = repmat((numLayers+1):(numLayers+numBounds),1,length(options.columnsPred));
+%	testData.classID(idx+1) = testData.classID(idx)+length(options.LayersPred);
+%	testData.classID(idx) = testData.classID(idx+1);
+%end

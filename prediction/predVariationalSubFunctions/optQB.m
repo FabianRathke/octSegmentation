@@ -2,11 +2,11 @@ if collector.options.printTimings
 	optQBTic = tic;
 end
 
-% conjugate gradient: Ax = b (K+\tilde{P}(\bar{mu}-\mu) =  \tilde{p}
+% conjugate gradient: Ax = b ==> (K+\tilde{P})(\bar{mu}-\mu) =  \tilde{p}
 x = conjgrad(P_mu + sigmaML^-1*eval(sprintf('eye(size(WML,1),%s)',collector.options.dataType)) - sigmaML^-1*WML*M*WML',-p_mu',eval(sprintf('zeros(1,length(p_mu),%s)',collector.options.dataType))');
 q_b.mu = single(x) + models.shapeModel.mu;
 
-% alternative conjugate gradient for very large shape prior matrices, where the explicit representation is to expensive in terms of memory
+% alternative conjugate gradient for very large shape prior matrices, where the explicit representation is to expensive in terms of memory --> use low-rank representation
 % inactive has to be checked and updated
 if 0
 	x = zeros(length(p_mu),1);
@@ -48,6 +48,9 @@ if 0
 end
 
 if collector.options.printTimings
+   if collector.options.calcOnGPU
+        GPUsync;
+    end
 	fprintf('[optQB]: %.3f s\n',toc(optQBTic));
 end
 

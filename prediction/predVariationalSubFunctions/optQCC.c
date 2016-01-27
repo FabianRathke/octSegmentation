@@ -7,6 +7,17 @@
 /* q_c.singleton = optQCMFC(condQB,prediction,Sigma_c,mu_c,c_c,mu_a_b,numColumnsPred,numColumnsShape,columnsPredShapeVec,columnsPredShapeFactorVec);
  * */
 
+/* sum the number of columns over all B-Scans */
+int numberTotalColumns(double* numColumnsShape, int numVolRegions)
+{
+	int ii;
+	int numColsTotal = 0;
+	for (ii=0;ii<numVolRegions;ii++) {
+		numColsTotal += (int)numColumnsShape[ii];
+	}
+	return numColsTotal;
+}
+
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 	/* Input variables */
@@ -25,52 +36,54 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	double *factorsPrec = mxGetPr(prhs[12]);
 	double *hashTable = mxGetPr(prhs[13]);
 
-	clock_t begin, end;
-	double time_elapsed_alpha,time_elapsed_beta;
+	/* intern variables and pointers */
+	double* q_c = NULL;
 
-	/* Counting variables */
-	int numVolRegions = mxGetNumberOfElements(prhs[7]);
+	int i,j,k,i1,i2,vol;
 	int numRows = mxGetM(prhs[0]);
+	int numVolRegions = mxGetNumberOfElements(prhs[7]);
+	int numBounds = mxGetN(prhs[0])/numberTotalColumns(numColumnsShape,numVolRegions);
+	int alphaSize = numRows*numBounds*sizeof(double);
+	double* alpha = malloc(alphaSize);
+	double* beta = malloc(alphaSize); 
 
+	double* c = malloc(numBounds*sizeof(double));
+	double alphaTotal,q_c_total,tmpA,tmpB,valA,valB,factorA,factorB;
+	double* preCalcA = malloc(numRows*sizeof(double));
+	double* preCalcB = malloc(numRows*sizeof(double));
+
+
+	int idxQC,idxShape,idxShapeWithout,idxPred,idx,idxA,idxB,idxC,idxANumRows,idxBNumRows,idxCondA,idxCondB;
+	int idxCounter,idxCounterA,idxCounterB;
+	int* numNonZeroIdx = malloc(numBounds*sizeof(int));
+	int* idxNonZeroB = malloc(numRows*sizeof(int));
+	/* int idxNonZeroAlpha[numBounds][numRows] */
+   	int* idxNonZeroAlpha = malloc(numBounds*numRows*sizeof(int)); 
+	int numNonZeroIdxB;
+
+	
 	/* determines when to use the hash table */
 	int limit = -10;
 
 	/* cumsum of the number of columns for previous regions */
-	int numColsShapeCS[numVolRegions+1], ii;
+	int* numColsShapeCS = malloc((numVolRegions+1)*sizeof(int)); 
+	int ii;
 	numColsShapeCS[0] = 0;
 	for (ii=1;ii<numVolRegions+1;ii++) {
 		numColsShapeCS[ii] = numColsShapeCS[ii-1] + (int)numColumnsShape[ii-1];
 	}
-	int numBounds = mxGetN(prhs[0])/numColsShapeCS[numVolRegions];
 	plhs[0] = mxCreateDoubleMatrix(1,numRows*numBounds*numVolRegions*numColumnsPred,mxREAL);
-	double *q_c = mxGetPr(plhs[0]);
+	q_c = mxGetPr(plhs[0]);
 	
-	int i,j,k,i1,i2,vol;
-	double alpha[numRows*numBounds];
-/*	plhs[1] = mxCreateDoubleMatrix(1,numRows*numBounds,mxREAL);
-	double *alpha = mxGetPr(plhs[1]); */
-	double beta[numRows*numBounds]; 
-/*	plhs[2] = mxCreateDoubleMatrix(1,numRows*numBounds,mxREAL);
-	double *beta = mxGetPr(plhs[2]); */
-
-	double c[numBounds];
-	double alphaTotal,q_c_total,tmpA,tmpB,idxTmp,valA,valB,factorA,factorB;
-	double preCalcA[numRows],preCalcB[numRows];
-
-	int numColsPrevRegion,idxQC,idxShape,idxShapeWithout,idxPred,idx,idxA,idxB,idxC,idxANumRows,idxBNumRows,idxCondA,idxCondB;
-	int idxCounter,idxCounterA,idxCounterB,numNonZeroIdx[numBounds];
-	int idxNonZeroB[numRows], idxNonZeroAlpha[numBounds][numRows], numNonZeroIdxB;
 
 	/* ****** start sum-product ******** */
 	for (vol=0; vol < numVolRegions; vol++) {
-	
-		numColsPrevRegion = numColsShapeCS[vol]*numBounds;
 		idxShape = numColsShapeCS[vol]*numBounds*numRows;
 		idxShapeWithout = numColsShapeCS[vol]*(numBounds-1)*numRows;
 
 		for (j=0; j < numColumnsPred; j++) {
-			memset(alpha, 0, sizeof(alpha));
-			memset(beta, 0, sizeof(beta));
+			memset(alpha, 0, alphaSize);
+			memset(beta, 0, alphaSize);
 
 			idxPred = numColumnsPred*vol + j;
 
@@ -84,7 +97,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				if (condQB[idxA + i]!=0 || condQB[idxB + i] !=0) {
 					alpha[i] = (colAFac[idxPred]*condQB[idxA + i] + colBFac[idxPred]*condQB[idxB + i])*prediction[idxC + i];
 					alphaTotal += alpha[i];
-					idxNonZeroAlpha[0][idxCounter] = i; idxCounter++;
+					idxNonZeroAlpha[idxCounter] = i; idxCounter++;
 				}
 			}
 			numNonZeroIdx[0] = idxCounter; idxCounter = 0;
@@ -92,7 +105,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 			/* normalize */
 			for (i=0; i < numNonZeroIdx[0]; i++) {
-				alpha[idxNonZeroAlpha[0][i]] /= c[0];
+				alpha[idxNonZeroAlpha[i]] /= c[0];
 			}
 
 			/* for boundaries 2 to numBounds */
@@ -103,7 +116,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				idx = numRows*(k-1);
 				/* precalculate entries for inner loop */
 				for (idxCounter = 0; idxCounter < numNonZeroIdx[k-1]; idxCounter++) {
-					i = idxNonZeroAlpha[k-1][idxCounter];
+					i = idxNonZeroAlpha[(k-1)*numRows + idxCounter];
 					preCalcA[i] = alpha[idx + i]*c_c[idxA + i];
 					preCalcB[i] = alpha[idx + i]*c_c[idxB + i];
 				}
@@ -123,11 +136,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				/* iterates over the columns of each transition matrix; corresponds to idxNonZeroA in matlab; determines the non-zero entries of the current alpha */
 				for (i1=0; i1 < numRows; i1++) {
 					if (condQB[idxCondA + i1] != 0 || condQB[idxCondB + i1] != 0) {
-						idxNonZeroAlpha[k][idxCounterB] = i1; idxCounterB++;
+						idxNonZeroAlpha[k*numRows + idxCounterB] = i1; idxCounterB++;
 						tmpA = tmpB = 0;
 						/* iterates over the rows of transition matrices; corresponds to idxNonZeroB in matlab */
 						for (idxCounterA = 0; idxCounterA < numNonZeroIdx[k-1]; idxCounterA++) {
-							i2 = idxNonZeroAlpha[k-1][idxCounterA];
+							i2 = idxNonZeroAlpha[(k-1)*numRows + idxCounterA];
 							if (i2 <= i1 && preCalcA !=0 && preCalcB !=0) {
 								valA = factorA*(i1 + 1 - mu_c[idxANumRows + i2])*(i1 + 1 - mu_c[idxANumRows + i2]);
 								valB = factorB*(i1 + 1 - mu_c[idxBNumRows + i2])*(i1 + 1 - mu_c[idxBNumRows + i2]);
@@ -145,7 +158,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 				/* copy idxNonZeroB onto idxNonZeroA and normalize alpha */
 				for (i=0;i<idxCounterB; i++) {
-					alpha[numRows*k + idxNonZeroAlpha[k][i]] /= c[k];
+					alpha[numRows*k + idxNonZeroAlpha[k*numRows + i]] /= c[k];
 				}
 				numNonZeroIdx[k] = idxCounterB;
  			}
@@ -182,7 +195,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				/* idxB */
 				q_c_total = 0;
 				for (idxCounter = 0; idxCounter < numNonZeroIdx[k]; idxCounter++) {
-					i1 = idxNonZeroAlpha[k][idxCounter];
+					i1 = idxNonZeroAlpha[k*numRows + idxCounter];
 					tmpA = tmpB = 0;
 					/* idxFinal */
 					for (idxCounterB = 0; idxCounterB < numNonZeroIdxB; idxCounterB++) {
@@ -202,9 +215,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				}
 				/* normalize q_c distribution */
 				for (idxCounter = 0; idxCounter < numNonZeroIdx[k]; idxCounter++) {
-					q_c[idxQC + idx + idxNonZeroAlpha[k][idxCounter]] /= q_c_total;
+					q_c[idxQC + idx + idxNonZeroAlpha[k*numRows + idxCounter]] /= q_c_total;
 				}
 			}
 		}
 	}
+	free(alpha); free(beta); free(c); free(preCalcA); free(preCalcB); free(numNonZeroIdx); free(idxNonZeroB); free(idxNonZeroAlpha); free(numColsShapeCS);
 }

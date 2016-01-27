@@ -44,7 +44,7 @@ output.prediction = cell(length(files),numVolRegions);
 output.trueLabels = cell(length(files),numVolRegions);
 options.positions = 1:numRows;
 
-% save for later use, save as short form for better code reading
+% save for later use, save as short form for better code readability
 WML = models.shapeModel.WML; sigmaML = models.shapeModel.sigmaML;
 M = inv(WML'*WML + sigmaML*eye(size(WML,2)));
 models.shapeModel.M = M;

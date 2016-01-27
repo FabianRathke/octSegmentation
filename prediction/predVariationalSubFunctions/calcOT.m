@@ -3,8 +3,8 @@ if collector.options.printTimings
 end
 
 mu_diff = q_b.mu'-models.shapeModel.mu';
-product = sigmaML^-1*double(mu_diff')- sigmaML^-1*models.shapeModel.WML*models.shapeModel.M*(models.shapeModel.WML'*mu_diff');
-productB = product(idxProd) - (sigmaML^-1*mu_diff(idxProd) - sigmaML^-1*sum(models.shapeModel.WML(idxProd,:)'.*(models.shapeModel.M*squeeze(sum(reshape((models.shapeModel.WML(idxPrecB,:)'.*repmat(reshape(mu_diff(idxMu)',1,[])',1,size(M,1))')',[numBounds,numColumnsShapeTotal*numBounds,size(M,1)]),1))'),1))';
+product = sigmaML^-1*double(mu_diff') - sigmaML^-1*WML*M*(WML'*mu_diff');
+productB = product(idxProd) - (sigmaML^-1*mu_diff(idxProd) - sigmaML^-1*sum(WML(idxProd,:)'.*(M*squeeze(sum(reshape((WML(idxPrecB,:)'.*repmat(reshape(mu_diff(idxMu)',1,[])',1,size(M,1))')',[numBounds,numColumnsShapeTotal*numBounds,size(M,1)]),1))'),1))';
 % simple reshape does not work anymore since the number of columns per region can vary
 tmp = models.shapeModel.mu(idxProd) - sum(Sigma_a_a_.*productB(idxProd2),2);
 mu_a_b = [];
@@ -18,6 +18,8 @@ condQB = (1./sqrt(2*pi*sigma_tilde_squared(ones(1,numRows),:)').*exp((-0.5)*((X 
 condQB(condQB < options.thresholdAccuracy) = 0;
 
 if collector.options.printTimings
-	GPUsync;
+   	if collector.options.calcOnGPU
+   		GPUsync;
+	end
 	fprintf('[calcOT]: %.3f s\n',toc(ticCalcOT));
 end

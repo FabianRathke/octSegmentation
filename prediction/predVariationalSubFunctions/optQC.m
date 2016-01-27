@@ -1,6 +1,6 @@
 tic;
 
-% calculate components to directly calculate the omegaTerms
+% calculate components to directly calculate the omegaTerms (see 3.2.3 in the thesis)
 Sigma_c = (factorsPrecAVec + sigma_tilde_squared(idxB).^-1).^-1;
 Sigma_c = eval(sprintf('%s(Sigma_c)',collector.options.dataTypeCast));
 
@@ -11,14 +11,16 @@ c_c = (1./sqrt(2*pi*(factorsPrecAVec(ones(1,numRows),:).^-1) + sigma_tilde_squar
 c_c(c_c < options.thresholdAccuracy) = 0;
 c_c = eval(sprintf('%s(c_c)',collector.options.dataTypeCast));
 
-% call the c-function in case we need not to calculate pair
+% call the c-function in case we need not to calculate pairwise marginals
 timeCFunc = 0;
 a = tic; q_cc = optQCC(double(condQB),prediction,double(Sigma_c.^-1),double(mu_c),double(c_c),double(mu_a_b2'),numColumnsPred,numColumnsShape,columnsPredShapeVec(1,:),columnsPredShapeFactorVec(1,:),columnsPredShapeVec(2,:),columnsPredShapeFactorVec(2,:),double(factorsPrecAVec),hashTable); 
 q_c.singleton = permute(reshape(q_cc,[numRows,numBounds,numColumnsPred,numVolRegions]),[4,3,2,1]);
 timeCFunc = toc(a);
 	
 if collector.options.printTimings
-	GPUsync;
+   	if collector.options.calcOnGPU
+		GPUsync;
+	end
 	fprintf('[optQC]: %.3f s (C-Func %.3f)\n',toc,timeCFunc);
 end
 

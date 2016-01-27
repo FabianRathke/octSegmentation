@@ -48,6 +48,8 @@ options.folder_labels = folderLabels;
 options = checkFields(options,params,15,'width');
 options = checkFields(options,params,15,'height');
 
+if ~isfield(options,'loadLabels') options.loadLabels = 1; end
+
 if ~isfield(options,'preprocessing') options.preprocessing = struct(); end
 % preprocessing on patch-Level (performed in trainAppearance and predictAppearance)
 if ~isfield(options.preprocessing,'patchLevel')
@@ -156,3 +158,6 @@ if ~isfield(options,'printTimings') options.printTimings = 0; end
 
 % the results struct will also contain the pixel wise probabilities for each appearance model
 if ~isfield(options,'saveAppearanceTerms') options.saveAppearanceTerms = 0; end
+
+% whether to return the training data for the shape model, i.e. all training segmentations
+if ~isfield(options,'returnShapeData') options.returnShapeData = 0; end

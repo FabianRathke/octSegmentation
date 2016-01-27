@@ -1,4 +1,4 @@
-% calc terms described as $\tilde{P}_{j,k}$ in the paper
+% calc terms described as $\tilde{p}_{j,k}$ in the paper
 % P for Sigma is the same as P for mu
 
 if collector.options.printTimings
@@ -7,7 +7,6 @@ end
 
 p_mu = eval(sprintf('zeros(1,numColumnsShapeTotal*numBounds,%s);',collector.options.dataType));
 
-% calc terms for k = 1
 for volRegion = 1:numVolRegions
 	idx = 1:numRows;
 	idx = idx(ones(1,numColumnsShape(volRegion)),:);
@@ -16,13 +15,15 @@ for volRegion = 1:numVolRegions
 		if collector.options.calcOnGPU
 			factor = GPUsingle(sum(squeeze(q_c.singleton(volRegion,columnsShapePred{volRegion},k,:)).*(idx - models.shapeModel.mu(columns,ones(1,numRows))),2))./sigma_tilde_squared(columns)';
 		else
-			factor = sum(squeeze(q_c.singleton(volRegion,columnsShapePred{volRegion},k,:)).*(idx - models.shapeModel.mu(columns,ones(1,numRows))),2)./sigma_tilde_squared(columns)';
+			factor = (sum(squeeze(q_c.singleton(volRegion,columnsShapePred{volRegion},k,:)).*idx,2) - models.shapeModel.mu(columns))./sigma_tilde_squared(columns)';
 		end
 		p_mu = p_mu + factor'*A_k(columns,:);
 	end
 end
 
 if collector.options.printTimings
-	GPUsync;
+    if collector.options.calcOnGPU
+        GPUsync;
+    end
 	fprintf('[calcDer]: %.3fs\n',toc(calcDerTic));
 end

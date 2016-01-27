@@ -16,7 +16,7 @@ for volRegion = 1:numVolRegions
 		idx_not_j = idx_all; idx_not_j(idx_j) = [];
 		
 		% use the CPU version of WML and M explicitly	
-		K_jj_inverse{volRegion,j} = inv(eye(numBounds)*sigmaML^-1 - sigmaML^-1*models.shapeModel.WML(idx_j,:)*models.shapeModel.M*models.shapeModel.WML(idx_j,:)');
+		K_jj_inverse{volRegion,j} = inv(eye(numBounds)*sigmaML^-1 - sigmaML^-1*WML(idx_j,:)*M*WML(idx_j,:)');
 		sigma_tilde_squared(idx_j) = K_jj_inverse{volRegion,j}(idx_diag)/options.alpha;
 	
 		% calculating A_k^j: note that we do not need the sigma^-2I part, since we pull a part of K that does not include the diagonal
@@ -28,12 +28,15 @@ for volRegion = 1:numVolRegions
 	end
 end
 clear idx_*
+% cast to different data type if required
 sigma_tilde_squared = eval(sprintf('%s(sigma_tilde_squared);',collector.options.dataTypeCast));
 
 factor = (1./sigma_tilde_squared');
 P_mu = (A_k.*factor(:,ones(1,numBounds*numColumnsShapeTotal)))'*A_k;
 
 if collector.options.printTimings
-	GPUsync;
+	if collector.options.calcOnGPU
+		GPUsync;
+	end
 	fprintf('[Initialized Shape Terms]: %.3fs \n',toc(ticCalcShape));
 end
