@@ -30,19 +30,23 @@ function trnData = collectTrnData(files,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 04-May-2014
+% Last Revision: 28-Jan-2016
 
 pw = ([options.height options.width]-1)/2; % number of pixels left and right of the center column in each patch
 
 numClasses = length(options.LayersTrain) + length(options.EdgesTrain);
 numPatches = options.numPatches*length(files)*numClasses;
 
-trnData.data = zeros(numPatches,options.height*options.width);
-trnData.classID = zeros(1,numPatches,'int8');
-trnData.type = zeros(1,numClasses,'int8');
-trnData.idx = zeros(numPatches,2,'int16');
+
+for region = 1:size(options.BScanRegions,1)
+	trnData(region).data = zeros(numPatches,options.height*options.width);
+	trnData(region).classID = zeros(1,numPatches,'int8');
+	trnData(region).type = zeros(1,numClasses,'int8');
+	trnData(region).idx = zeros(numPatches,2,'int16');
+end
 
 helper = 1:options.Y;
+numPatchesAdded = zeros(1,size(options.BScanRegions,1));
 
 for i = 1:length(files)
 	[a filename] = fileparts(files(i).name);
@@ -51,6 +55,7 @@ for i = 1:length(files)
 	for region = 1:size(options.BScanRegions,1)
 		% draw patches from within layers	
 		idxRand = zeros(2,options.numPatches*numClasses); % x and y coordinates of patches to draw, coordinates indicate center of the patch
+		setToZero = []; % in case we can not provide numPatches for that region we delete these samples to zero
 		counter = 1;
 		if length(options.LayersTrain) > 0
 			% calculate Raster; i.e. the pixel-wise labeling of the B-Scan
@@ -70,15 +75,20 @@ for i = 1:length(files)
 					idxRand(1,idxSave) = A;
 					idxRand(2,idxSave) = B;	
 				elseif strcmp(options.patchPosition,'middle')
-					% first filter the set of usable columns
-					% find columns with at least one pixels thick layers;
+					% first filter the set of usable columns: find columns with at least one pixels thick layers;
 					idxCols = idxCols(find(sum((Classes(:,idxCols) == options.LayersTrain(j)).*ones(size(Classes(:,idxCols))))>0));
 					% the patch drawn from the image must be within the image
 					idxCols = idxCols(round(sum((Classes(:,idxCols) == options.LayersTrain(j)).*helper(ones(1,length(idxCols)),:)')./sum(Classes(:,idxCols) == options.LayersTrain(j)))>round(pw(1)/2));
 					random = randperm(length(idxCols));
-					
-					idxRand(2,idxSave) = idxCols(random(1:options.numPatches));		
-					idxRand(1,idxSave) = round(sum((Classes(:,idxRand(2,idxSave)) == options.LayersTrain(j)).*helper(ones(1,options.numPatches),:)')./sum(Classes(:,idxRand(2,idxSave)) == options.LayersTrain(j)));
+				
+					if length(random) < options.numPatches
+						idxRand(2,idxSave(1:length(random))) = idxCols;
+						idxRand(1,idxSave(1:length(random))) = round(sum((Classes(:,idxRand(2,idxSave(1:length(random)))) == options.LayersTrain(j)).*helper(ones(1,length(random)),:)')./sum(Classes(:,idxRand(2,idxSave(1:length(random)))) == options.LayersTrain(j)));
+						setToZero = [setToZero idxSave(length(random)+1:options.numPatches)];
+					else
+						idxRand(2,idxSave) = idxCols(random(1:options.numPatches));		
+						idxRand(1,idxSave) = round(sum((Classes(:,idxRand(2,idxSave)) == options.LayersTrain(j)).*helper(ones(1,options.numPatches),:)')./sum(Classes(:,idxRand(2,idxSave)) == options.LayersTrain(j)));
+					end
 				end
 				trnData(region).type(j) = 1;
 			end
@@ -100,14 +110,22 @@ for i = 1:length(files)
 			end
 		end
 
-		idxSave = (1:(options.numPatches*numClasses)) + (i-1)*(options.numPatches*numClasses);
+		%idxSave = (1:(options.numPatches*numClasses)) + (i-1)*(options.numPatches*numClasses);
+		numPatchesToAdd = options.numPatches*numClasses-length(setToZero);
+		idxSave = (1:numPatchesToAdd) + numPatchesAdded(region);
+	   	numPatchesAdded(region) = numPatchesAdded(region) + numPatchesToAdd;
+
+		idxRand(:,setToZero) = [];
+		
 		trnData(region).idx(idxSave,:) = idxRand';
 		
 		% transfer indices from B0 to B0Aug
-		idxRand = idxRand + repmat([pw(1); pw(2)],1,options.numPatches*numClasses);
+		idxRand = idxRand + repmat([pw(1); pw(2)],1,numPatchesToAdd);
 		patches = fetchPatches(filename,idxRand,options);
 
-		trnData(region).classID(idxSave) = reshape(repmat([options.LayersTrain (1:length(options.EdgesTrain)) + options.numLayers],options.numPatches,1),1,options.numPatches*numClasses);
+		classIDs =  reshape(repmat([options.LayersTrain (1:length(options.EdgesTrain)) + options.numLayers],options.numPatches,1),1,options.numPatches*numClasses);
+		classIDs(setToZero) = [];
+		trnData(region).classID(idxSave) = classIDs; 
 		trnData(region).data(idxSave,:) = patches.data;
 	end
 end
