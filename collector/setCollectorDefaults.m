@@ -11,10 +11,10 @@ function options = setCollectorDefaults(options,params,files,folderData,folderLa
 %       .clip                - [boolean] determines whether to clip parts of the scan before segmentation; useful for example to remove the nerve head. Default: [false]
 %       .clipRange           - [array](2) left and right boundary for clipping. Default: [1 scan-width]
 %       .preprocessing       - [struct] struct with fields 'patchLevel' and 'scanLevel'; for each field cell array of methods and their parameters; Default: [options.preprocessing.patchLevel = {{@projToEigenspace,20}}]
-%       .loadRoutineData     - [string] user-defined routine to load a B-Scan; see loadData.m for details. Default: ['spectralis'] 
+%       .loadRoutineData     - [string] user-defined routine to load a B-Scan; see loadData.m for details. Default: ['spectralisMat'] 
 %       .loadRoutineLabels   - [string] user-defined routine to load ground truth; see loadLabels.m for details. Default: ['LabelsFromLabelingTool']
 %       .labelIDs            - [array](numFiles,numRegionsPerVolume) holds ids to idenity the scans used in a 3-D volume 
-%       .BScanRegions        - [array](2,numBScanRegions) can be used to divide each B-Scan into regions with seperate appearance models; left and right boundaries of each reagion. Default: [[1 numColumns]]
+%       .BScanRegions        - [array]([1,2],numBScanRegions) can be used to divide each B-Scan into regions with seperate appearance models; left and right boundaries of each reagion. Default: [[1 numColumns]], that is one appearance model for the whole scan
 %       .numRegionsPerBScan  - [int] number of regions in each B-Scan, automatically determined from BScanRegions
 %       .numRegionsPerVolume - [int] for 3-D volumes, the number of B-Scans; for 2-D set = 1
 %       .calcOnGPU           - [boolean] move parts of the calculation onto the GPU. Default: [false]
@@ -39,7 +39,7 @@ function options = setCollectorDefaults(options,params,files,folderData,folderLa
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 30-Apr-2013
+% Last Major Revision: 28-Jan-2015
 
 options.folder_data = folderData;
 options.folder_labels = folderLabels;
@@ -65,7 +65,7 @@ end
 if ~isfield(options,'verbose') options.verbose = 1; end
 
 % define loading routines for labels and data sets
-if ~isfield(options,'loadRoutineData') options.loadRoutineData = 'spectralis'; end
+if ~isfield(options,'loadRoutineData') options.loadRoutineData = 'spectralisMat'; end
 if ~isfield(options,'loadRoutineLabels') options.loadRoutineLabels = 'LabelsFromLabelingTool'; end
 
 % the number of regions per file/volume, 1 ==  2-D Scan, > 1 == 3-D Volume
@@ -114,6 +114,12 @@ if length(files) > 0
 	options.LayersPred = 1:numLayers;
 
 	% can be used to divide each B-Scan into regions, which use seperate appearance models
+	if isfield(options,'BScanRegions')
+		% of only one column is provided (specifying left limits of each region), add another column with right limits
+		if size(options.BScanRegions,2) == 1
+			options.BScanRegions = [options.BScanRegions [options.BScanRegions(2:end)-1; options.X]];
+		end
+	end
 	if ~isfield(options,'BScanRegions') options.BScanRegions = [1 options.X]; end
 	options.numRegionsPerBScan = size(options.BScanRegions,1);
 	
@@ -161,3 +167,11 @@ if ~isfield(options,'saveAppearanceTerms') options.saveAppearanceTerms = 0; end
 
 % whether to return the training data for the shape model, i.e. all training segmentations
 if ~isfield(options,'returnShapeData') options.returnShapeData = 0; end
+
+if ~isfield(options,'full3D') options.full3D = 0; end
+
+% params of shape prior for volumes 
+if options.numRegionsPerVolume > 1
+	if ~isfield(options,'BScanPositions') options.BScanPositions = 0; end
+	if ~isfield(options,'BscansSelect') options.BscansSelect = 0; end
+end

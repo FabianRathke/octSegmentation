@@ -20,17 +20,37 @@ function B0 = loadData(filename,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 26-Feb-2014
+% Last Revision: 06-Feb-2016
 
-fileType = {'','.mat'};
+[pathstr,name,ext] = fileparts(filename);
 
-if strcmp(options.loadRoutineData,'spectralis')
-	load([options.folder_data filename fileType{~isempty(strfind(filename,'.mat'))}],sprintf('B%d',options.labelID));
-	eval(sprintf('B0 = B%d;',options.labelID));
+if strcmp(options.loadRoutineData,'spectralisMat')
+	if isempty(ext)
+		ext = '.mat';
+	end
+	load([options.folder_data name ext],sprintf('B%d',options.labelID-1));
+	eval(sprintf('B0 = B%d;',options.labelID-1));
 	B0(B0>10) = 0;
 	B0 = sqrt(sqrt(B0));
+elseif strcmp(options.loadRoutineData,'spectralisVol')
+	if isempty(ext)
+		ext = '.vol';
+	end
+	% which slice of the volume should be loaded
+	optionsVolImport = struct('BScansSelect',options.labelID);
+	BScanData = HDEVolImporter(options.folder_data,[name ext],optionsVolImport);
+	if (~iscell(BScanData))
+		error(sprintf('Loading %s failed',filename));
+	end
+	B0 = BScanData{1};
+	B0(B0>10) = 0;
+	B0(isnan(B0)) = 0;
+	B0 = sqrt(sqrt(B0));
 elseif strcmp(options.loadRoutineData,'AMDDataset')
-	load([options.folder_data filename fileType{~isempty(strfind(filename,'.mat'))}],'images');
+	if isempty(ext)
+		ext = '.mat';
+	end
+	load([options.folder_data name ext],'images');
 	B0 = squeeze(images(:,:,options.labelID));
 else
 	error('Please specify a valid routine for fetching data in collector.options.loadRoutineData');

@@ -47,6 +47,7 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 	
 		% find class ids (i.e. classes representing boundary and layer patches)
 		ids = unique(trainData(regionBScan).classID);
+		ids(ids==0) = [];
 
 		% call the appearance model set by the user	
 		appearanceModel = options.appearanceModel(trainData(regionBScan),ids,params,options);

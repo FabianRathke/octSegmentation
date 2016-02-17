@@ -36,6 +36,11 @@ function output = predVariational(files,collector,params,models,options)
 
 initSegmentation;
 
+if length(files) > 1
+	error('Debug: Prediction currently only works for one file');
+end
+
+
 for file = 1:length(files)
 	fprintf('... make predictions for ** %s **\n',files(file).name);
 	
@@ -114,10 +119,10 @@ for file = 1:length(files)
 			end
 			unsigned_error(iter,volRegion) = sum(sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
 
-			if isnan(unsigned_error(iter,:))
+			if sum(isnan(unsigned_error(iter,:)))
 				fprintf('NaN detected, aborting prediction\n');
 				boundaries(iter,:,:) = old_boundaries;
-				break;
+				return
 			end	
 		end
 		fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));

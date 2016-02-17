@@ -23,8 +23,9 @@ function models = trainModels(files,collector,params,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 06-Dec-2013
+% Last Major Revision: 03-Feb-2016
 
 models.appearanceModel = trainAppearance(files,collector,params,options.appearanceModel);
 models.shapeModel = trainShape(files,collector,params,options.shapeModel);
 
+models.params = collector.options;

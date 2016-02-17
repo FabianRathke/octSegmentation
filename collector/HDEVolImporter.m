@@ -1,4 +1,4 @@
-function [BScanHeader, BScanSeg, BScanData, SLO, fileHeader] = HDEVolImporter(folder,filename,options)
+function [BScanData, BScanHeader, BScanSeg, SLO, fileHeader] = HDEVolImporter(folder,filename,options)
 
 options = setDefaultOptions(options);
 
@@ -7,9 +7,19 @@ HEADERSIZE = 2048;
 fprintf('Start reading...\n');
 fprintf('Filename: %s\n',filename);
 
+[pathstr,name,ext] = fileparts(filename);
+% in case there is no extension, set it to .vol
+if length(ext) == 0
+	filename = [filename '.vol'];
+elseif ~strcmp(ext,'.vol')
+	disp(sprintf('%s is not a vol-file.',filename));
+	BScanHeader = -1; BScanSeg = []; BScanData = []; SLO = []; fileHeader = [];
+	return
+end
+
 file = fopen([folder filesep filename],'rb');
 if (file==-1)
-	disp('File could not be read.');
+	disp(sprintf('%s could not be read.',filename));
 	BScanHeader = -1; BScanSeg = []; BScanData = []; SLO = []; fileHeader = [];
 	return
 end
@@ -124,6 +134,7 @@ BScanData = cell(BScansNum,1);
 
 currPosition = ftell(file);
 
+
 for n = 1:BScansNum
 	% read B-Scan header
 	BScanHeader{n} = readHeader(file,BScanHeaderStruct,numDataFields);
@@ -139,14 +150,23 @@ for n = 1:BScansNum
 	BScanData{n}(BScanData{n} == realmax('single')) = NaN;
 	BScanData{n} = BScanData{n}';
 	
-	if options.plotBScans
-		figure; imagesc(sqrt(sqrt(BScanData{n}))); title(sprintf('B-Scan %d',n)); colormap gray;
-	end	
-
 	currPosition = ftell(file);
 end
 
-fprintf('Number of BScans: %d, resolution: %d px x %d px\n',BScansNum,fileHeader.SizeX,fileHeader.SizeZ);
+if isfield(options,'BScansSelect')
+	BScanHeader = BScanHeader(options.BScansSelect);
+	BScanSeg = BScanSeg(options.BScansSelect);
+	BScanData = BScanData(options.BScansSelect);
+	BScansNum = length(options.BScansSelect);
+end
+	
+if options.plotBScans
+	for n = 1:BScansNum
+		figure; imagesc(sqrt(sqrt(BScanData{n}))); title(sprintf('B-Scan %d',n)); colormap gray;
+	end	
+end
+
+fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),fileHeader.SizeX,fileHeader.SizeZ);
 % print aera covered by BScans
 sizeX = norm([BScanHeader{end}.EndX BScanHeader{end}.EndY]-[BScanHeader{end}.StartX BScanHeader{end}.StartY]);
 sizeY = norm([BScanHeader{end}.StartX BScanHeader{end}.StartY]-[BScanHeader{1}.StartX BScanHeader{1}.StartY]);
@@ -154,6 +174,7 @@ fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXS
 fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
 fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
 fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/fileHeader.NumBScans,sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans);
+fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans;
 
 if options.plotSLO
 	figure; imagesc(sqrt(sqrt(SLO))); t = title(['SLO ' filename]); colormap gray;

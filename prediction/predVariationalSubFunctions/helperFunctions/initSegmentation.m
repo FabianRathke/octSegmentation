@@ -8,6 +8,12 @@ ColorOrder = [0 0 1.0000;
 
 options = setSegmentationDefaults(options,params);
 
+% if available, use params specified by the trained model
+fieldNames = fieldnames(models.params);
+for i = 1:length(fieldNames)
+	setfield(collector.options,fieldNames{i},getfield(models.params,fieldNames{i}));
+end
+
 % name used in plots containing current parameter combination
 names = fieldnames(params);
 filename = '';
@@ -16,7 +22,26 @@ for i = 1:length(names)
 end
 
 % some standard variables
-numVolRegions = collector.options.numRegionsPerVolume;
+%numVolRegions = collector.options.numRegionsPerVolume;
+numVolRegions = length(collector.options.labelIDs);
+% quick hack --> change for final version: check which model components are required and modify the model to fit these requirements;
+% better --> just save an array of model indices and leave the model itself untouched
+for i = 1:numVolRegions
+	% calculate distance of i'th Bscan from the center scan in the volume (is at zero px)
+	dist = (collector.options.labelIDs(i) - (floor(collector.options.numBScansPerVolume/2)+1))*collector.options.distBScans;
+	% find closest B-scan in the shape model
+	[~,scanID] = min(abs(models.params.BScanPositions-dist));
+	fprintf('DEBUG: Distance to central scan is %.fpx, picked %d''th component of shape model\n',dist,scanID);
+	modelTmp.appearanceModel(i,:,:) = models.appearanceModel(scanID,:,:);
+	modelTmp.shapeModel(i) = models.shapeModel(scanID);
+end
+% set modified model as the new model
+models = modelTmp;
+collector.options.columnsShape = cell(1,numVolRegions);
+for i = 1:numVolRegions
+	collector.options.columnsShape{i} = models.shapeModel.columnsShape;
+end	
+	
 numBounds = length(collector.options.EdgesPred);
 numRows = collector.options.Y;
 numClasses = length(collector.options.EdgesPred) + length(collector.options.LayersPred);
@@ -50,6 +75,8 @@ M = inv(WML'*WML + sigmaML*eye(size(WML,2)));
 models.shapeModel.M = M;
 WML = eval(sprintf('%s(WML)',collector.options.dataTypeCast));
 M = eval(sprintf('%s(M)',collector.options.dataTypeCast));
+prodWM = WML*M;
+prodWMT = prodWM';
 
 % calculate factors for mu_a_b where a and b are neighbouring boundaries in the same column
 factorsPrecA = cell(1,numVolRegions);
@@ -69,7 +96,7 @@ factorsPrecAVec = [factorsPrecA{:}];
 factorsPrecBVec = [factorsPrecB{:}];
 
 % for the c-sum-product
-hashTable = sort(exp(-10000:0.01:0),'descend');
+hashTable = sort(exp(-1000:0.001:0),'descend');
 
 
 % initialize 

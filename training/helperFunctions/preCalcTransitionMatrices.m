@@ -22,26 +22,51 @@ function model = preCalcTransitionMatrices(collector,model)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 02-May-2013
+% Last Revision: 04-Feb-2016
 
 % some definitions
 preCalcMat = tic;
 numBounds = length(collector.options.EdgesTrain);
-model.pTransV = cell(1,collector.options.numRegionsPerVolume);
+if collector.options.full3D
+	model.pTransV = cell(1,collector.options.numRegionsPerVolume);
+end
 numColumnsShape = cellfun('length',collector.options.columnsShape);
+
 % for each pair of neighboring boundaries within one colume, calculate transition matrices from the learned shape prior
-for region = 1:collector.options.numRegionsPerVolume
-	numColumns = length(collector.options.columnsShape{region});
-	pTransTmp = cell(numColumns,numBounds);
-	for i = 1:numColumns
-		for j = 2:numBounds
-			idx_a = i + (j-2)*numColumns + numBounds*sum(numColumnsShape(1:region-1));
-			idx_b = idx_a + numColumns;
-			P = inv(model.WML([idx_a idx_b],:)*model.WML([idx_a idx_b],:)' + eye(2)*model.sigmaML);
-			pTransTmp{i,j} = sparse(getCondTransMatrix([model.mu(idx_a) model.mu(idx_b)]',P,collector.options.Y));
+% for a fully 3D model, we have one shape prior over all B-Scans
+if collector.options.full3D
+	for region = 1:collector.options.numRegionsPerVolume
+		numColumns = length(collector.options.columnsShape{region});
+		pTransTmp = cell(numColumns,numBounds);
+		for i = 1:numColumns
+			for j = 2:numBounds
+				idx_a = i + (j-2)*numColumns + numBounds*sum(numColumnsShape(1:region-1));
+				idx_b = idx_a + numColumns;
+				P = inv(model.WML([idx_a idx_b],:)*model.WML([idx_a idx_b],:)' + eye(2)*model.sigmaML);
+%				pTransTmp{i,j} = sparse(getCondTransMatrix([model.mu(idx_a) model.mu(idx_b)]',P,collector.options.Y));
+				[iS jS sS numElements] = getCondTransMatrixC([model.mu(idx_a) model.mu(idx_b)]',P,int32(collector.options.Y));
+				pTransTmp{i,j} = sparse(iS(1:numElements),jS(1:numElements),sS(1:numElements),collector.options.Y,collector.options.Y);
+			end
 		end
+		model.pTransV{region} = pTransTmp;
 	end
-	model.pTransV{region} = pTransTmp;
+% for 3D with 2D shape prior, we calculate a seperate model for each 2-D B-Scan
+else
+    for region = 1:collector.options.numRegionsPerVolume
+        numColumns = length(collector.options.columnsShape{region});
+        pTransTmp = cell(numColumns,numBounds);
+        for i = 1:numColumns
+            for j = 2:numBounds
+                idx_a = i + (j-2)*numColumns;
+                idx_b = idx_a + numColumns;
+                P = inv(model(region).WML([idx_a idx_b],:)*model(region).WML([idx_a idx_b],:)' + eye(2)*model(region).sigmaML);
+                %pTransTmp{i,j} = sparse(getCondTransMatrix([model(region).mu(idx_a) model(region).mu(idx_b)]',P,collector.options.Y));
+				[iS jS sS numElements] = getCondTransMatrixC([model.mu(idx_a) model.mu(idx_b)]',P,int32(collector.options.Y));
+                pTransTmp{i,j} = sparse(iS(1:numElements),jS(1:numElements),sS(1:numElements),collector.options.Y,collector.options.Y);
+            end
+        end
+       	model(region).pTransV{1} = pTransTmp;
+    end
 end
 
-%printMessage(sprintf('... calculated transition matrices %.2f s ... \n',toc(preCalcMat)),1,collector.options.verbose);
+printMessage(sprintf('... calculated transition matrices %.2f s ... \n',toc(preCalcMat)),1,collector.options.verbose);

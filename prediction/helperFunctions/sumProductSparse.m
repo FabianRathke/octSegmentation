@@ -38,9 +38,11 @@ c = size(1,N);
 alpha(:,1) = pStart'.*pObs(:,1);
 c(1) = sum(alpha(:,1));
 alpha(:,1) = alpha(:,1)/c(1);
-
 for i = 2:N
 	alpha(:,i) = pObs(:,i)'.*(alpha(:,i-1)'*pTrans{i});
+	if i ==2
+		log(alpha(:,i))';
+	end
 	% scale alpha
 	c(i) = sum(alpha(:,i));
 	alpha(:,i) = alpha(:,i)/c(i);

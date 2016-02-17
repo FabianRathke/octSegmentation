@@ -1,8 +1,8 @@
-function output = predAppearance(files,collector,params,models,options)
+function output = predAppearance(files,collector,models,options)
 % predAppearance - fetches patches from test files, and predicts likelihood terms p(y|c) or p(c|y) using a user selected appearance model
 %
 % Syntax:
-%   output = predAppearance(files,collector,params,models,options) 
+%   output = predAppearance(files,collector,models,options) 
 %
 % Inputs:
 %   files     - [struct] files to fetch ground truth from
@@ -15,7 +15,6 @@ function output = predAppearance(files,collector,params,models,options)
 %     .options.dataType
 %     .options.preprocessing.patchLevel
 %     .options.BScanRegions
-%   params    - [struct]
 %   models    - [struct] appearance models for all files and BScans; have to be compatible with the function called in 
 %   options   - [struct]
 %     .normalizeDataTerm - [boolean] converts generative to discriminative terms (i.e. normalizes the sum of probabilities to 1 for each pixel)
@@ -37,7 +36,7 @@ function output = predAppearance(files,collector,params,models,options)
 
 % defaults are defined in local function, see below
 options = setAppearanceDefaults(options);
-numClasses = models(1).numClasses;
+numClasses = size(models,3);
 
 output.prediction = cell(length(files),collector.options.numRegionsPerVolume);
 output.trueLabels = cell(length(files),collector.options.numRegionsPerVolume);
@@ -52,7 +51,7 @@ for i = 1:length(files)
 			fprintf('[Fetched patches]: %.3fs\n',timeFetchingPatches);
 		end
 
-		if collector.options.saveAppearanceTerms
+		if collector.options.saveAppearanceTerms && collector.options.loadLabels
 			output.trueLabels{i,regionVolume} = patches.classID;
 		end
 		% initialize results with the suitable data type; for GPU or CPU computations

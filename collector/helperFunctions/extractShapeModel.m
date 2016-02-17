@@ -27,12 +27,13 @@ function [mu Sigma h] = extractShapeModel(files,collector)
 
 numColumnsShape = cellfun('length',collector.options.columnsShape);
 numColPrev = 0;
+numRegionsPerVolume = collector.options.numRegionsPerVolume;
 
 % initialize data matrix
 h = zeros(length(collector.options.EdgesTrain)*sum(numColumnsShape),length(files));
 
 for i = 1:length(files)
-	for regionVolume = 1:collector.options.numRegionsPerVolume
+	for regionVolume = 1:numRegionsPerVolume
 		idx = collector.options.columnsShape{regionVolume};
 	    [a filename] = fileparts(files(i).name);
 		% sets the ID for the current file (important for volumes)
@@ -43,8 +44,18 @@ for i = 1:length(files)
 	
 		idxSave = (1:length(idx)*size(interpolation,1)) + sum(numColumnsShape(1:regionVolume-1))*size(interpolation,1);
 		h(idxSave,i) = reshape(interpolation',1,size(interpolation,1)*length(idx));
+		idxS{regionVolume} = idxSave;
 	end
 end
 
 % calculate mean and covariance
-mu = mean(h'); Sigma = cov(h');
+if collector.options.full3D
+	mu{1} = mean(h'); Sigma{1} = cov(h');
+else
+	mu = cell(numRegionsPerVolume,1);
+	Sigma = cell(numRegionsPerVolume,1);
+	for regionVolume = 1:numRegionsPerVolume
+		mu{regionVolume} = mean(h(idxS{regionVolume},:)');
+		Sigma{regionVolume} = cov(h(idxS{regionVolume},:)');
+	end
+end

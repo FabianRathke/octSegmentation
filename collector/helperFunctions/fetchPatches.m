@@ -54,7 +54,7 @@ if options.centerPatches
 	patches.data = patches.data - mean_tmp(:,ones(1,patchSize));
 end
 
-if options.saveAppearanceTerms
+if options.saveAppearanceTerms && options.loadLabels
 	interpolation = loadLabels(filename,options);
 	Classes = wrapperGetRaster(interpolation(options.EdgesTrain,:),[options.Y size(interpolation,2)]);
 %	patches.classID = Classes(sub2ind(size(B0),idxSet));

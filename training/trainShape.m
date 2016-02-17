@@ -34,7 +34,7 @@ function models = trainShape(files,collector,params,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 30-Apr-2013
+% Last Revision: 04-Feb-2016
 
 % generates a default filename out of the set of the trainings set filenames
 h = hash([files.name],'MD5');
@@ -63,28 +63,34 @@ if options.loadShape
 
 	printMessage(sprintf('... loaded saved shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);
 else
+	printMessage(sprintf('... train shape prior model (may take several minutes) ... \n'),1,collector.options.verbose); tic;
 	% fetch the ground truth for files
 	[mu,Sigma,data] = extractShapeModel(files,collector);
-	printMessage(sprintf('... train shape prior model (may take several minutes) ... \n'),1,collector.options.verbose);
-	tic;
+	
+	for j = 1:length(mu)
+		% perform PPCA (see the book 'Pattern Recognition' by Bishop for details)
+		[V D] = eig(Sigma{j}); % eigendecomposition of the covariance matrix 
+		D = diag(D);
+		% estimate for sigma^2 is the average of the disregarded eigenvalues
+		sigmaML= 1/(length(D)-options.numModes)*sum(D(1:end-options.numModes));
+		% select modes accoding to the options.numModes highest eigenvalues
+		WML = V(:,end:-1:end-options.numModes+1)*sqrt(diag(D(end:-1:end-options.numModes+1)) - eye(options.numModes)*sigmaML);
+		% add parameters to the model struct
+		models(j).mu = mu{j}'; models(j).WML = WML; models(j).sigmaML = sigmaML;
+	    if collector.options.full3D
+			models.columnsShape = collector.options.columnsShape;
+		else
+			models(j).columnsShape = collector.options.columnsShape{j};
+		end
 
-	% perform PPCA (see the book 'Pattern Recognition' by Bishop for details)
-	[V D] = eig(Sigma); % eigendecomposition of the covariance matrix 
-	D = diag(D);
-	% estimate for sigma^2 is the average of the disregarded eigenvalues
-	sigmaML= 1/(length(D)-options.numModes)*sum(D(1:end-options.numModes));
-	% select modes accoding to the options.numModes highest eigenvalues
-	WML = V(:,end:-1:end-options.numModes+1)*sqrt(diag(D(end:-1:end-options.numModes+1)) - eye(options.numModes)*sigmaML);
-	% add parameters to the model struct
-	models.mu = mu'; models.WML = WML; models.sigmaML = sigmaML; models.columnsShape = collector.options.columnsShape;
+		if options.returnShapeData
+			models(j).data = data;
+		end
+	end
 	clear D V Sigma
 
-	if options.returnShapeData
-		models.data = data;
-	end
-
 	% pre-calculate the shape prior for the columnwise graphical models to speed up prediction
-	models = preCalcTransitionMatrices(collector,models); 
+%	models = preCalcTransitionMatrices(collector,models); 
 
 	% save the trained shape model as matfile
 	if options.saveShape
@@ -94,14 +100,16 @@ else
 			save(sprintf('%s/%s.mat',options.shapeFolder,h),'models','-v7.3');
 		% reduce the required storage by not saving the transition matrices but calculate them upon loading the model
 		else
-			pTransV = models.pTransV;
+			for j = 1:length(models)
+				pTransV{j} = models(j).pTransV;
+			end
 			models = rmfield(models,'pTransV');
 			save(sprintf('%s/%s.mat',options.shapeFolder,h),'models','-v7.3');
-			models.pTransV = pTransV;
+			for j = 1:length(models)
+				models(j).pTransV = pTransV{j};
+			end
 		end
 		printMessage(fprintf('Stored shape model for later usage in %s\n',sprintf('%s/%s.mat',options.shapeFolder,h)),1,collector.options.verbose);
-	else
-		printMessage(fprintf('Did not store the shape model in a file\n'),1,collector.options.verbose);
 	end
 
 	printMessage(sprintf('... trained shape prior model in %.2f s ... \n',toc),1,collector.options.verbose);

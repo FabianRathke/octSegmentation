@@ -1,6 +1,7 @@
 tic;
 
-% calculate components to directly calculate the omegaTerms (see 3.2.3 in the thesis)
+% calculate parameters of a Gaussian density, that is the product of two Gaussian densities (3.2.11 and 3.2.12 in the thesis)
+%  
 Sigma_c = (factorsPrecAVec + sigma_tilde_squared(idxB).^-1).^-1;
 Sigma_c = eval(sprintf('%s(Sigma_c)',collector.options.dataTypeCast));
 
@@ -86,7 +87,6 @@ end
 %				q_c.pairwise{volRegion,j,i-1} = sparse(c(i)^-1.*alpha((i-1)*ones(1,numRows),:)'.*pObs(i*ones(numRows,1),:).*omegaTerms{volRegion,i,j}.*beta(i*ones(1,numRows),:));
 %				q_c.pairwise{volRegion,j,i-1} = q_c.pairwise{volRegion,j,i-1}/sum(sum(q_c.pairwise{volRegion,j,i-1}));
 %			end
-%		end
 %		end
 %	end
 %	toc;

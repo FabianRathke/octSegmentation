@@ -31,14 +31,14 @@ function testData = collectTestData(file,options)
 pw = ([options.height options.width]-1)/2;
 [a filename] = fileparts(file.name);
 
-numBounds = length(options.EdgesPred); numLayers = length(options.LayersPred);
-
+% determines which columns and which rows to fetch from the B-scan
 [a b] = meshgrid(options.columnsPred+pw(2),1+pw(1):options.Y+pw(1));
 idxSet = [reshape(b,1,options.Y*length(options.columnsPred)); reshape(a,1,options.Y*length(options.columnsPred))];
 testData = fetchPatches(filename,idxSet,options);
 testData.idx = int16(idxSet' - pw(ones(1,size(idxSet,2)),:));
 
 % set class to boundary classes where transitions between layers occur (change of index)
+%numBounds = length(options.EdgesPred); numLayers = length(options.LayersPred);
 %if options.saveAppearanceTerms
 %	tmp = testData.classID(2:end)-testData.classID(1:end-1);
 %	idx = find(tmp==1);

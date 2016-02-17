@@ -23,7 +23,7 @@ for volRegion = 1:numVolRegions
 		if collector.options.calcOnGPU
 			A_k(idx_j,idx_not_j) = GPUsingle(K_jj_inverse{volRegion,j})*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
 		else
-			A_k(idx_j,idx_not_j) = K_jj_inverse{volRegion,j}*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
+			A_k(idx_j,idx_not_j) = K_jj_inverse{volRegion,j}*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_not_j);
 		end
 	end
 end
@@ -31,8 +31,8 @@ clear idx_*
 % cast to different data type if required
 sigma_tilde_squared = eval(sprintf('%s(sigma_tilde_squared);',collector.options.dataTypeCast));
 
-factor = (1./sigma_tilde_squared');
-P_mu = (A_k.*factor(:,ones(1,numBounds*numColumnsShapeTotal)))'*A_k;
+%factor = (1./sigma_tilde_squared');
+%P_mu = (A_k.*factor(:,ones(1,numBounds*numColumnsShapeTotal)))'*A_k;
 
 if collector.options.printTimings
 	if collector.options.calcOnGPU

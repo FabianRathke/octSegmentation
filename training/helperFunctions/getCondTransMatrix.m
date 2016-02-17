@@ -26,7 +26,8 @@ mu_a_b = mu(2) - Prec(2,2)^-1*Prec(2,1)*(positions-mu(1));
 A = positions;
 factor = 1/(2*pi*inv(Prec(2,2)))^0.5;
 n = length(positions);
-matrix = triu(factor*reshape(exp(-0.5*Prec(2,2)*((reshape(A(ones(1,n),:)',1,n^2) - reshape(mu_a_b(ones(1,n),:),1,n^2)).^2)),n,n)',0);
+tmp = (reshape(A(ones(1,n),:)',1,n^2) - reshape(mu_a_b(ones(1,n),:),1,n^2));
+matrix = triu(factor*reshape(exp(-0.5*Prec(2,2)*(tmp.*tmp)),n,n)',0);
 
 % introduce sparsity
 matrix(matrix<(10^-12)) = 0;

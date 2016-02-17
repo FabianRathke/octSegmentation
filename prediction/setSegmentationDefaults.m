@@ -65,3 +65,7 @@ end
 if ~isfield(options,'detailedOutput')
 	options.detailedOutput = 0;
 end
+
+if ~isfield(options,'printTimings')
+	options.printTimings = 0;
+end

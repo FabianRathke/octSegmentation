@@ -25,9 +25,9 @@ function interpolation = loadLabels(filename,options)
 filename = strrep(filename,'.mat','');
 
 if strcmp(options.loadRoutineLabels,'LabelsFromLabelingTool')
-	load([options.folder_labels filename '_' num2str(options.labelID) '_coordinates.mat']);
+	load([options.folder_labels filename '_' num2str(options.labelID-1) '_coordinates.mat']);
 elseif strcmp(options.loadRoutineLabels,'spectralisLabels')
-	load([options.folder_labels filename],sprintf('B%dseg',options.labelID));
+	load([options.folder_labels filename],sprintf('B%dseg',options.labelID-1));
 	eval(sprintf('interpolation = B%dseg',options.labelID));
 	interpolation(interpolation > options.Y) = 100;
 elseif strcmp(options.loadRoutineLabels,'AMDDataset')

@@ -77,7 +77,7 @@ for i = 1:length(files)
 				elseif strcmp(options.patchPosition,'middle')
 					% first filter the set of usable columns: find columns with at least one pixels thick layers;
 					idxCols = idxCols(find(sum((Classes(:,idxCols) == options.LayersTrain(j)).*ones(size(Classes(:,idxCols))))>0));
-					% the patch drawn from the image must be within the image
+					% the patch drawn from the image must lie inside the image
 					idxCols = idxCols(round(sum((Classes(:,idxCols) == options.LayersTrain(j)).*helper(ones(1,length(idxCols)),:)')./sum(Classes(:,idxCols) == options.LayersTrain(j)))>round(pw(1)/2));
 					random = randperm(length(idxCols));
 				
