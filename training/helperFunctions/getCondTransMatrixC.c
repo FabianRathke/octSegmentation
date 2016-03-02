@@ -7,9 +7,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	double* mu = mxGetPr(prhs[0]);
 	double* prec = mxGetPr(prhs[1]);
 	int numRows = (int) mxGetScalar(prhs[2]);
-
+	double eps = (double) mxGetScalar(prhs[3]);
 	/* only calculate probabilities up to this precision */
-	double eps = pow(10,-15);
 	double mu_a_b;
 	int muFloor;
 	double var_a_b = 1/prec[3]; /* for the conditional density, variance is given by the inverse precision matrix */

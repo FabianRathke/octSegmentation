@@ -50,6 +50,8 @@ options = checkFields(options,params,15,'height');
 
 if ~isfield(options,'loadLabels') options.loadLabels = 1; end
 
+if ~isfield(options,'mirrorBScan') options.mirrorBScan = ''; end
+
 if ~isfield(options,'preprocessing') options.preprocessing = struct(); end
 % preprocessing on patch-Level (performed in trainAppearance and predictAppearance)
 if ~isfield(options.preprocessing,'patchLevel')
@@ -77,7 +79,7 @@ if ~isfield(options,'numRegionsPerVolume')
 	end
 end
 % ids for single scans of a volume  (used in functions loadLabels and loadData)
-if ~isfield(options,'labelIDs') options.labelIDs = zeros(length(files),options.numRegionsPerVolume); end
+if ~isfield(options,'labelIDs') options.labelIDs = ones(length(files),options.numRegionsPerVolume); end
 
 % enables to clip the width of B-Scans; i.e. useful for volumnes to remove the part containing the nerve head
 if ~isfield(options,'clip') 
@@ -175,3 +177,4 @@ if options.numRegionsPerVolume > 1
 	if ~isfield(options,'BScanPositions') options.BScanPositions = 0; end
 	if ~isfield(options,'BscansSelect') options.BscansSelect = 0; end
 end
+

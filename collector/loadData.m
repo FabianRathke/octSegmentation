@@ -5,12 +5,13 @@ function B0 = loadData(filename,options)
 %
 % Inputs:
 %	filename - [string] filename of the matfile to load
-%	options  - [struct] controller options
-%     .folder_data     - [string] points to the folder of filename
-%     .labelID 	       - [int] Spectralis B-Scans are labeled B0,B1,..., labelID is ID of the B-Scan to load
-%     .clip		       - [boolean] indicates whether to clip a B-Scan at the left and right border
-%     .clipRange	   - [array](2) defines the left and right border of the B-Scan after clipping
-%     .loadRoutineData - [string] the user-defined routine that is used to load the data
+%	options  - [struct] collector options
+%     .folder_data     	- [string] points to the folder of filename
+%     .labelID 	       	- [int] Spectralis B-Scans are labeled B0,B1,..., labelID is ID of the B-Scan to load
+%     .clip		       	- [boolean] indicates whether to clip a B-Scan at the left and right border
+%     .clipRange	   	- [array](2) defines the left and right border of the B-Scan after clipping
+%     .loadRoutineData 	- [string] the user-defined routine that is used to load the data
+%	  .mirrowBScan		- [string] defines a trigger to mirrow the scan (left/right eye)
 %
 % Outputs:
 %	B0 - [matrix] the B-Scan 
@@ -20,7 +21,7 @@ function B0 = loadData(filename,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 06-Feb-2016
+% Last Revision: 27-Feb-2016
 
 [pathstr,name,ext] = fileparts(filename);
 
@@ -28,17 +29,22 @@ if strcmp(options.loadRoutineData,'spectralisMat')
 	if isempty(ext)
 		ext = '.mat';
 	end
-	load([options.folder_data name ext],sprintf('B%d',options.labelID-1));
+	load([options.folder_data name ext],sprintf('B%d',options.labelID-1),'ScanPosition');
 	eval(sprintf('B0 = B%d;',options.labelID-1));
 	B0(B0>10) = 0;
 	B0 = sqrt(sqrt(B0));
+	if length(options.mirrorBScan) > 0
+		if findstr(fileHeader.ScanPosition,options.mirrorBScan)
+			B0 = B0(:,end:-1:1);
+		end
+	end
 elseif strcmp(options.loadRoutineData,'spectralisVol')
 	if isempty(ext)
 		ext = '.vol';
 	end
 	% which slice of the volume should be loaded
 	optionsVolImport = struct('BScansSelect',options.labelID);
-	BScanData = HDEVolImporter(options.folder_data,[name ext],optionsVolImport);
+	[BScanData fileHeader] = HDEVolImporter(options.folder_data,[name ext],optionsVolImport);
 	if (~iscell(BScanData))
 		error(sprintf('Loading %s failed',filename));
 	end
@@ -46,6 +52,12 @@ elseif strcmp(options.loadRoutineData,'spectralisVol')
 	B0(B0>10) = 0;
 	B0(isnan(B0)) = 0;
 	B0 = sqrt(sqrt(B0));
+	% if left eye, rotate the scan
+	if length(options.mirrorBScan) > 0
+		if findstr(fileHeader.ScanPosition,options.mirrorBScan)
+			B0 = B0(:,end:-1:1);
+		end
+	end
 elseif strcmp(options.loadRoutineData,'AMDDataset')
 	if isempty(ext)
 		ext = '.mat';

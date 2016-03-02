@@ -1,4 +1,4 @@
-function model = preCalcTransitionMatrices(collector,model)
+function model = preCalcTransitionMatrices(collector,model,eps)
 % preCalcTransitionMatrices - given a PPCA shape model, precalcs transition matrices used during the initialization of the inference approach 
 %
 % Syntax:
@@ -44,7 +44,7 @@ if collector.options.full3D
 				idx_b = idx_a + numColumns;
 				P = inv(model.WML([idx_a idx_b],:)*model.WML([idx_a idx_b],:)' + eye(2)*model.sigmaML);
 %				pTransTmp{i,j} = sparse(getCondTransMatrix([model.mu(idx_a) model.mu(idx_b)]',P,collector.options.Y));
-				[iS jS sS numElements] = getCondTransMatrixC([model.mu(idx_a) model.mu(idx_b)]',P,int32(collector.options.Y));
+				[iS jS sS numElements] = getCondTransMatrixC([model.mu(idx_a) model.mu(idx_b)]',P,int32(collector.options.Y),eps);
 				pTransTmp{i,j} = sparse(iS(1:numElements),jS(1:numElements),sS(1:numElements),collector.options.Y,collector.options.Y);
 			end
 		end
@@ -61,7 +61,7 @@ else
                 idx_b = idx_a + numColumns;
                 P = inv(model(region).WML([idx_a idx_b],:)*model(region).WML([idx_a idx_b],:)' + eye(2)*model(region).sigmaML);
                 %pTransTmp{i,j} = sparse(getCondTransMatrix([model(region).mu(idx_a) model(region).mu(idx_b)]',P,collector.options.Y));
-				[iS jS sS numElements] = getCondTransMatrixC([model.mu(idx_a) model.mu(idx_b)]',P,int32(collector.options.Y));
+				[iS jS sS numElements] = getCondTransMatrixC([model.mu(idx_a) model.mu(idx_b)]',P,int32(collector.options.Y),eps);
                 pTransTmp{i,j} = sparse(iS(1:numElements),jS(1:numElements),sS(1:numElements),collector.options.Y,collector.options.Y);
             end
         end

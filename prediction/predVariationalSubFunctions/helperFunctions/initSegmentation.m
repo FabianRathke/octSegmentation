@@ -26,17 +26,19 @@ end
 numVolRegions = length(collector.options.labelIDs);
 % quick hack --> change for final version: check which model components are required and modify the model to fit these requirements;
 % better --> just save an array of model indices and leave the model itself untouched
-for i = 1:numVolRegions
-	% calculate distance of i'th Bscan from the center scan in the volume (is at zero px)
-	dist = (collector.options.labelIDs(i) - (floor(collector.options.numBScansPerVolume/2)+1))*collector.options.distBScans;
-	% find closest B-scan in the shape model
-	[~,scanID] = min(abs(models.params.BScanPositions-dist));
-	fprintf('DEBUG: Distance to central scan is %.fpx, picked %d''th component of shape model\n',dist,scanID);
-	modelTmp.appearanceModel(i,:,:) = models.appearanceModel(scanID,:,:);
-	modelTmp.shapeModel(i) = models.shapeModel(scanID);
+if length(models.shapeModel) > 1
+	for i = 1:numVolRegions
+		% calculate distance of i'th Bscan from the center scan in the volume (is at zero px)
+		dist = double((collector.options.labelIDs(i) - (floor(collector.options.numBScansPerVolume/2)+1))*collector.options.distBScans);
+		% find closest B-scan in the shape model
+		[~,scanID] = min(abs(models.params.BScanPositions-dist));
+		fprintf('DEBUG: Distance to central scan is %.fpx, picked %d''th component of shape model\n',dist,scanID);
+		modelTmp.appearanceModel(i,:,:) = models.appearanceModel(scanID,:,:);
+		modelTmp.shapeModel(i) = models.shapeModel(scanID);
+	end
+	% set modified model as the new model
+	models = modelTmp;
 end
-% set modified model as the new model
-models = modelTmp;
 collector.options.columnsShape = cell(1,numVolRegions);
 for i = 1:numVolRegions
 	collector.options.columnsShape{i} = models.shapeModel.columnsShape;

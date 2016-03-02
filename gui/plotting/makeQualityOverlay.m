@@ -7,7 +7,7 @@ for i = 1:9
 end
 
 %ranges = linspace(5,20,5);
-ranges = [5 10 15 20];
+ranges = [4 8 12 16 20];
 numR = length(ranges);
 colors = [ones(numR-1,1) linspace(1,0,numR-1)' zeros(numR-1,1)];
 

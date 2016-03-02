@@ -1,8 +1,6 @@
-function [BScanData, fileHeader, BScanHeader, BScanSeg, SLO] = HDEVolImporter(folder,filename,options)
+function [BScanData, fileHeader, BScanHeader, BScanSeg, SLO] = HDEMatImporter(folder,filename,options)
 
 options = setDefaultOptions(options);
-
-HEADERSIZE = 2048;
 
 fprintf('Start reading...\n');
 fprintf('Filename: %s\n',filename);
@@ -10,18 +8,24 @@ fprintf('Filename: %s\n',filename);
 [pathstr,name,ext] = fileparts(filename);
 % in case there is no extension, set it to .vol
 if length(ext) == 0
-	filename = [filename '.vol'];
-elseif ~strcmp(ext,'.vol')
-	disp(sprintf('%s is not a vol-file.',filename));
+	filename = [filename '.mat'];
+elseif ~strcmp(ext,'.mat')
+	disp(sprintf('%s is not a mat-file.',filename));
 	BScanHeader = -1; BScanSeg = []; BScanData = []; SLO = []; fileHeader = [];
 	return
 end
 
-file = fopen([folder filesep filename],'rb');
-if (file==-1)
+if (~exist([folder filesep filename]))
 	disp(sprintf('%s could not be read.',filename));
 	BScanHeader = -1; BScanSeg = []; BScanData = []; SLO = []; fileHeader = [];
 	return
+else
+	load([folder filesep filename]);
+end
+if exist('SLO')
+	SLO = double(SLO);
+else
+	SLO = [];
 end
 
 fileHeaderStruct = 	{{'Version','c',0}, ... 		% Version identifier: HSF-OCT-xxx, xxx = version number of the file format, Current version: xxx = 102
@@ -54,104 +58,53 @@ fileHeaderStruct = 	{{'Version','c',0}, ... 		% Version identifier: HSF-OCT-xxx,
 					{'GridOffset','i',212}, ...		% File offset of the thickness data in the file. If GridType is 0, GridOffset is 0.
 					{'GridType1','i',216}, ...		% Type of a 2nd grid used to derive a 2nd set of thickness data.
 					{'GridOffset1','i',220}, ...	% File offset of the 2 nd thickness data set in the file.
-					{'ProgID','c',224}, ...			% Internal progression ID (zero terminated string). All scans of the same progression share this ID.
-					{'Spare','c',258}}; 			% Spare bytes for future use. Initialized to 0.	   
+					{'ProgID','c',224}};			% Internal progression ID (zero terminated string). All scans of the same progression share this ID.
 
-% the number of data fields depending on the version
-versionSize = {{'100',19}, {'101',26}, {'102',28}, {'103',31}};
-
-% read verion
-version = fread(file,12,'int8=>char');
-fprintf('Version: %s\n',version);
-version = version(9:fileHeaderStruct{2}{3}-1)';
-
-numDataFields = 0;
-for i = 1:length(versionSize)
-	if strcmp(version,versionSize{i}{1})
-		numDataFields = versionSize{i}{2};
+% check which variables are available
+fileHeader = struct();
+for i = 1:length(fileHeaderStruct)
+	string = fileHeaderStruct{i}{1};
+	if exist(string)
+		eval(sprintf('fileHeader.%s = %s;',string,string));
 	end
 end
 
-if (numDataFields == 0)
-	warning(sprintf('Current version %s is newer than last documented version %s, default to this last version',version,versionSize{end}{1}));
-	numDataFields = versionSize{end}{2};
+fieldNames = fieldnames(fileHeader);
+for i = 1:length(fieldNames)
+	val = getfield(fileHeader,fieldNames{i});
+	if isinteger(val)
+		fileHeader = setfield(fileHeader,fieldNames{i},int32(val));
+	end
 end
 
-% point file to the beginning 
-frewind(file);
-
-% read file header
-fileHeader = readHeader(file,fileHeaderStruct,numDataFields);
-
-if strcmp(fileHeader.ScanPosition(1:2),'OD')
-	fprintf('Right eye examined\n');
-else
-	fprintf('Left eye examined\n');
+% get the number of BScans
+varnames = who;
+BScansNum = sum(cell2mat(regexpi(varnames,'^B\d{1,}$')));
+if BScansNum == 1
+	fileHeader.NumBScans = BScansNum;
 end
-
-% point file to end of header
-fseek(file, HEADERSIZE, 'bof');
-
-% read SLO image, dimensions encoded in SizeXSLO and SizeYSLO; each pixel gray value between 0 and 255
-SLO = reshape(fread(file,fileHeader.SizeXSlo*fileHeader.SizeYSlo,'uint8'),fileHeader.SizeXSlo,fileHeader.SizeYSlo)';
-
-% read B0 scans
-BScanHeaderLength = fileHeader.BScanHdrSize; % size in bytes
-BScanDim = [fileHeader.SizeX,fileHeader.SizeZ]; % dimension in pixels
-
-BScansNum = fileHeader.NumBScans; % number of BScans
-
-BScanHeaderStruct = {{'Version','c',0}, ... 		% Version identifier (zero terminated string). Version Format: "HSF-BS-xxx, xxx = version number of the B-Scan header format. Current version: xxx = 103
-					{'BScanHdrSize','i',12}, ...	% Size of the B-Scan header in bytes. It is identical to the same value of the file header.
-					{'StartX','d',16}, ...		% X-Coordinate of the B-Scan's start point in mm.
-					{'StartY','d',24}, ...		% Y-Coordinate of the B-Scan's start point in mm.
-					{'EndX','d',32}, ...			% X-Coordinate of the B-Scan's end point in mm. For circle scans, this is the X-Coordinate of the circle's center point.
-					{'EndY','d',40}, ...			% Y-Coordinate of the B-Scan's end point in mm. For circle scans, this is the Y-Coordinate of the circle's center point.
-					{'NumSeg','i',48}, ...		% Number of segmentation vectors
-					{'OffSeg','i',52}, ...		% Offset of the array of segmentation vectors relative to the beginning of this B-Scan header.
-					{'Quality','f',56}, ...		% Image quality measure. If this value does not exist, its value is set to INVALID.
-					{'Shift','i',60}, ...			% Horizontal shift (in # of A-Scans) of the classification band against the segmentation lines (for circular scan only).
-					{'IVTrafo','f',64}, ...		% Intra volume transformation matrix. The values are only available for volume and radial scans and if alignment is turned off, otherwise the values are initialized to 0.
-					{'Spare','c',88}};			% Spare bytes for future use.
-
-versionSize = {{'100',8},{'101',9},{'102',10},{'103',11}};
-
-numDataFields = 0;
-for i = 1:length(versionSize)
-    if strcmp(version,versionSize{i}{1})
-        numDataFields = versionSize{i}{2};
-    end
-end
-
-if (numDataFields == 0)
-    warning(sprintf('Current version %s is newer than last documented version %s, default to this last version (may produce errors)',version,versionSize{end}{1}));
-    numDataFields = versionSize{end}{2};
-end
-
-BScanHeader = cell(BScansNum,1);
 BScanSeg = cell(BScansNum,1);
 BScanData = cell(BScansNum,1); 
+BScanHeader = cell(BScansNum,1);
 
-currPosition = ftell(file);
-
+headerVars = {'StartX','StartY','EndX','EndY'};
 
 for n = 1:BScansNum
-	% read B-Scan header
-	BScanHeader{n} = readHeader(file,BScanHeaderStruct,numDataFields);
-
-	fseek(file, currPosition+BScanHeader{n}.OffSeg, 'bof');
-	% read segmentation (number of segmentation lines * number of A-Scans)
-	BScanSeg{n} = reshape(fread(file,BScanHeader{n}.NumSeg*fileHeader.SizeX,'float'),fileHeader.SizeX,BScanHeader{n}.NumSeg);
-	BScanSeg{n}(BScanSeg{n} == realmax('single')) = NaN;
-
-	% read B-Scan itself
-	fseek(file, currPosition+BScanHeader{n}.BScanHdrSize, 'bof');
-	BScanData{n} = reshape(fread(file,fileHeader.SizeX*fileHeader.SizeZ,'float'),fileHeader.SizeX,fileHeader.SizeZ);
+	BScanSeg{n} = eval(sprintf('B%dseg;',n-1));
+	BScanData{n} = eval(sprintf('B%d',n-1));
+  	BScanSeg{n}(BScanSeg{n} == realmax('single')) = NaN;
 	BScanData{n}(BScanData{n} == realmax('single')) = NaN;
-	BScanData{n} = BScanData{n}';
-	
-	currPosition = ftell(file);
+
+	for i = 1:length(headerVars)
+		if BScansNum > 1
+			eval(sprintf('BScanHeader{%d}.%s = B%d%s;',n,headerVars{i},n-1,headerVars{i}));
+		else
+			eval(sprintf('BScanHeader{%d}.%s = %s;',n,headerVars{i},headerVars{i}));
+		end
+	end
 end
+
+[fileHeader.SizeZ fileHeader.SizeX] = size(BScanData{1});
 
 if isfield(options,'BScansSelect')
 	BScanHeader = BScanHeader(options.BScansSelect);
@@ -171,10 +124,12 @@ fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),
 sizeX = norm([BScanHeader{end}.EndX BScanHeader{end}.EndY]-[BScanHeader{end}.StartX BScanHeader{end}.StartY]);
 sizeY = norm([BScanHeader{end}.StartX BScanHeader{end}.StartY]-[BScanHeader{1}.StartX BScanHeader{1}.StartY]);
 fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXSlo,fileHeader.SizeYSlo,fileHeader.ScaleXSlo,fileHeader.ScaleYSlo);
-fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
-fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
-fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/fileHeader.NumBScans,sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans);
-fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans;
+if BScansNum > 1
+	fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
+	fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
+	fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/fileHeader.NumBScans,sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans);
+	fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans;
+end
 
 if options.plotSLO
 	figure; imagesc(sqrt(sqrt(SLO))); t = title(['SLO ' filename]); colormap gray;
@@ -207,32 +162,5 @@ function options = setDefaultOptions(options)
 
 	if ~isfield(options,'plotBScans')
 		options.plotBScans = 0;
-	end
-end
-
-function header = readHeader(file,headerStruct,numDataFields)
-	for i = 1:numDataFields
-		fieldLength = headerStruct{i+1}{3}-headerStruct{i}{3};
-		if (strcmp(headerStruct{i}{2}(1),'c')) % string
-			value = fread(file,fieldLength,'int8=>char')';
-		elseif (strcmp(headerStruct{i}{2}(1),'i')) % integer
-			numInts = fieldLength/4; value = [];
-			for j = 1:numInts
-				value(j) = fread(file,1,'int32');
-			end
-		elseif (strcmp(headerStruct{i}{2}(1),'f')) % float
-			numFloats = fieldLength/4; value = [];
-			for j = 1:numFloats
-				value(j) = fread(file,1,'float');
-			end
-		elseif (strcmp(headerStruct{i}{2}(1),'d') || strcmp(headerStruct{i}{2}(1),'date')) % double or date
-			numDoubles = fieldLength/8; value=[];
-			for j = 1:numDoubles
-				value(j) = fread(file,1,'double');
-			end
-		end
-
-%		header(i,:) = {headerStruct{i}{1},value};
-		header.(headerStruct{i}{1}) = value;
 	end
 end

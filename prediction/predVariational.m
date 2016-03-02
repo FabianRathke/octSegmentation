@@ -50,7 +50,6 @@ for file = 1:length(files)
 	end		
 
 	boundaries = zeros(numVolRegions,numBounds,numColumnsPred);
-	q_c.singleton = zeros(numVolRegions,numColumnsPred,numBounds,numRows);
 
 	% the pairwise terms of q_c are only needed, when calculating the mutual information
 	if options.calcFuncVal
@@ -64,7 +63,13 @@ for file = 1:length(files)
 		end
 	end
 
-	initMarginalsWithHMM;
+	if ~isfield(options,'q_c_singleton')
+		q_c.singleton = zeros(numVolRegions,numColumnsPred,numBounds,numRows);
+%		[q_c output] = initQC(files(file),collector,models,options,q_c);
+		initQC;
+	else
+		q_c.singleton = options.q_c_singleton;
+	end
 
 	error_init = 0;
 	for volRegion = 1:collector.options.numRegionsPerVolume
@@ -75,8 +80,6 @@ for file = 1:length(files)
 		if collector.options.loadLabels
 			error_init = error_init + sum(sum(abs(output.prediction_init{file,volRegion}(:,columnsShapePred{volRegion})-output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion}))))/(numColumnsShape(volRegion)*numBounds);
 			fprintf('Initial unsigned error: %.3fpx\n',error_init/numVolRegions);
-		else 
-			error_init = 0;
 		end
 
 		if options.plotting
@@ -85,9 +88,20 @@ for file = 1:length(files)
 		end
 	end
 	
+	% is this option is set, the prediction finishes now, and returns the initial prediction	
+	if options.onlyInitialize
+		output.q_c_singleton = q_c.singleton;
+		output.q_b{file} = [];
+		if options.calcFuncVal
+			calcFuncVals;
+			output.funcVal(file) = funcVal;
+		end
+		return
+	end
+
 	% calculates the constant contributions of the shape prior to the omega-matrices
 	calcShapeTerms;
-
+	unsigned_error = [];
 	for iter = 1:options.iterations
 		fprintf('Iteration %d\n',iter);
 		% save last iterations prediction for convergence criteria
@@ -107,35 +121,42 @@ for file = 1:length(files)
 		change_per_iteration(iter) = 0;
 		for volRegion = 1:numVolRegions
 			boundaries(volRegion,:,:) = squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
-			change_per_iteration(iter) =  change_per_iteration(iter) + mean(mean(mean(abs(boundaries(volRegion,:,columnsShapePred{volRegion})-old_boundaries(volRegion,:,columnsShapePred{volRegion})))));
+         	change_per_iteration(iter) =  change_per_iteration(iter) + mean(mean(mean(abs(boundaries(volRegion,:,columnsShapePred{volRegion})-old_boundaries(volRegion,:,columnsShapePred{volRegion})))));
 		end
+		if sum(isnan(boundaries(:)))
+			fprintf('NaN detected, aborting prediction\n');
+			return
+		end	
 		fprintf('Mean change: %.3fpx\n',change_per_iteration(iter));
-
+		
 		for volRegion = 1:numVolRegions
-			if options.detailedOutput
-				idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
-				q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
-				q_c_error(iter,volRegion,:) = sum(abs(squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2)) -output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+			if collector.options.loadLabels
+				if options.detailedOutput  
+					idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
+					q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
+					q_c_error(iter,volRegion,:) = sum(abs(squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2)) -output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+				end
+				unsigned_error(iter,volRegion) = sum(sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
 			end
-			unsigned_error(iter,volRegion) = sum(sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
 
-			if sum(isnan(unsigned_error(iter,:)))
-				fprintf('NaN detected, aborting prediction\n');
-				boundaries(iter,:,:) = old_boundaries;
-				return
-			end	
 		end
-		fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));
+		if collector.options.loadLabels
+			fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));
+		end
 
 		% after convergence, save the final result and quit the optimization
 		if (iter == options.iterations || (iter > 1 && change_per_iteration(iter) < options.threshold))
 			output.columnsPred = collector.options.columnsPred;
+			output.q_c_singleton = q_c.singleton;
+			output.q_b{file} = reshape(q_b.mu,numColumnsShape(volRegion),[])';
+			if collector.options.loadLabels
+				output.unsigned_error{file} = unsigned_error; unsigned_error = [];	
+			end
 			for volRegion = 1:numVolRegions
 				output.prediction{file,volRegion} = squeeze(boundaries(volRegion,:,:));
 			end
 			if options.detailedOutput
 				output.change_per_iteration{file} = change_per_iteration; change_per_iteration = [];
-				output.unsigned_error{file} = unsigned_error; unsigned_error = [];		
 				output.q_c_error{file} = q_c_error; q_c_error = [];
 				output.q_b_error{file} = q_b_error; q_b_error = [];
 				output.q_b{file} = q_b.mu;

@@ -146,8 +146,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 								valB = factorB*(i1 + 1 - mu_c[idxBNumRows + i2])*(i1 + 1 - mu_c[idxBNumRows + i2]);
 							
 								/* printf("%d: %.2f\n",(int)(-valA*10 +0.5),valA); */
-								tmpA += (valA < -limit) ? preCalcA[i2]*hashTable[(int)(-valA*1000 +0.5)] : preCalcA[i2]*exp(valA);
-								tmpB += (valB < -limit) ? preCalcB[i2]*hashTable[(int)(-valB*1000 +0.5)] : preCalcB[i2]*exp(valB);
+								if (valA > -300) {
+									tmpA += (valA < -limit) ? preCalcA[i2]*hashTable[(int)(-valA*1000 +0.5)] : preCalcA[i2]*exp(valA);
+								}
+								if (valB > -300) {
+									tmpB += (valB < -limit) ? preCalcB[i2]*hashTable[(int)(-valB*1000 +0.5)] : preCalcB[i2]*exp(valB);
+								}
 							}
 						}
 						alpha[numRows*k + i1] = prediction[idxPred*numRows*numBounds + k*numRows + i1]*(colAFac[idxPred]*tmpA + colBFac[idxPred]*tmpB);

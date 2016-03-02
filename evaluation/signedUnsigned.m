@@ -35,32 +35,34 @@ div = numBounds*numColumns;
 
 for i = 1:numFiles
 	for j = 1:numRegions
-		% interpolated unpredicted columns and calculate error measure for the whole scan
-		if options.interpolation
-			for k = 1:numBounds
-				predInter(k,columnsInterp) = interp1(prediction.columnsPred,prediction.prediction{i,j}(k,:),columnsInterp,'spline','extrap');
-				predInter(k,prediction.columnsPred) = prediction.prediction{i,j}(k,:);
-				predInterInit(k,columnsInterp) = interp1(prediction.columnsPred,prediction.prediction_init{i,j}(k,:),columnsInterp,'spline','extrap');
-				predInterInit(k,prediction.columnsPred) = prediction.prediction_init{i,j}(k,:);
+		if isfield(prediction,'trueLabels')
+			% interpolated unpredicted columns and calculate error measure for the whole scan
+			if options.interpolation
+				for k = 1:numBounds
+					predInter(k,columnsInterp) = interp1(prediction.columnsPred,prediction.prediction{i,j}(k,:),columnsInterp,'spline','extrap');
+					predInter(k,prediction.columnsPred) = prediction.prediction{i,j}(k,:);
+					predInterInit(k,columnsInterp) = interp1(prediction.columnsPred,prediction.prediction_init{i,j}(k,:),columnsInterp,'spline','extrap');
+					predInterInit(k,prediction.columnsPred) = prediction.prediction_init{i,j}(k,:);
+				end
+				results.quadratic(i,j) = sum(sum(abs(predInter-prediction.trueLabels{i,j}).^2,2))/div;
+				results.unsigned(i,j) = sum(sum(abs(predInter-prediction.trueLabels{i,j}),2))/div;
+				results.unsigned_per_layer(:,i,j) = sum(abs(predInter-prediction.trueLabels{i,j}),2)/numColumns;
+				results.unsigned_per_column(i,j,:,:) = abs(predInter-prediction.trueLabels{i,j});
+				results.unsigned_init(i,j) = sum(sum(abs(predInterInit-prediction.trueLabels{i,j}),2))/div;
+				results.unsigned_init_per_layer(:,i,j) = sum(abs(predInterInit-prediction.trueLabels{i,j}),2)/numColumns;
+				results.signed(i,j) = sum(sum(predInter-prediction.trueLabels{i,j},2))/div;
+				results.signed_per_layer(:,i,j) = sum(predInter-prediction.trueLabels{i,j},2)/numColumns;
+			% without interpolation only obtain error measure of columns for which predictions where obtained
+			else
+				results.quadratic(i,j) = sum(sum(abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)).^2,2))/div;
+				results.unsigned(i,j) = sum(sum(abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2))/div;
+				results.unsigned_per_layer(:,i,j) = sum(abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2)/numColumns;
+				results.unsigned_per_column(i,j,:,:) = abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred));
+				results.unsigned_init(i,j) = sum(sum(abs(prediction.prediction_init{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2))/div;
+				results.unsigned_init_per_layer(:,i,j) = sum(abs(prediction.prediction_init{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2)/numColumns;
+				results.signed(i,j) = sum(sum(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred),2))/div;
+				results.signed_per_layer(:,i,j) = sum(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred),2)/numColumns;
 			end
-			results.quadratic(i,j) = sum(sum(abs(predInter-prediction.trueLabels{i,j}).^2,2))/div;
-			results.unsigned(i,j) = sum(sum(abs(predInter-prediction.trueLabels{i,j}),2))/div;
-			results.unsigned_per_layer(:,i,j) = sum(abs(predInter-prediction.trueLabels{i,j}),2)/numColumns;
-			results.unsigned_per_column(i,j,:,:) = abs(predInter-prediction.trueLabels{i,j});
-			results.unsigned_init(i,j) = sum(sum(abs(predInterInit-prediction.trueLabels{i,j}),2))/div;
-			results.unsigned_init_per_layer(:,i,j) = sum(abs(predInterInit-prediction.trueLabels{i,j}),2)/numColumns;
-			results.signed(i,j) = sum(sum(predInter-prediction.trueLabels{i,j},2))/div;
-			results.signed_per_layer(:,i,j) = sum(predInter-prediction.trueLabels{i,j},2)/numColumns;
-		% without interpolation only obtain error measure of columns for which predictions where obtained
-		else
-			results.quadratic(i,j) = sum(sum(abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)).^2,2))/div;
-			results.unsigned(i,j) = sum(sum(abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2))/div;
-			results.unsigned_per_layer(:,i,j) = sum(abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2)/numColumns;
-			results.unsigned_per_column(i,j,:,:) = abs(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred));
-			results.unsigned_init(i,j) = sum(sum(abs(prediction.prediction_init{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2))/div;
-			results.unsigned_init_per_layer(:,i,j) = sum(abs(prediction.prediction_init{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred)),2)/numColumns;
-			results.signed(i,j) = sum(sum(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred),2))/div;
-			results.signed_per_layer(:,i,j) = sum(prediction.prediction{i,j}-prediction.trueLabels{i,j}(:,prediction.columnsPred),2)/numColumns;
 		end
 	end
 end

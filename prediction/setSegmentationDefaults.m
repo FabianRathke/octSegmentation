@@ -14,6 +14,7 @@ function options = setSegmentationDefaults(options,params)
 %     .alpha           - [float] smaller values increase the area around the mean of q_b that is taken into consideration when inferring q_c (default: 0.1)
 %     .calcFuncValue   - [boolean] if true outputs terms, that can be used for pathology detection and to access the segmentation uncertainty (see the corresponding publication for detailts) (default: false)
 %     .detailedOutput  - [boolean] triggers the ouput of more detailed results (the q_b mode as well as errors for q_b and q_c for each iteration) (default: false)
+%     .onlyInitialize  - [boolean] just executes the initialization of the q_c distribution and returns afterwards
 %   params  - [struct] holds params used for example in cross-validation 
 %     .alpha           - [float] same as above
 %
@@ -28,7 +29,7 @@ function options = setSegmentationDefaults(options,params)
 % Last Revision: 29-Apr-2014
 
 if (~isfield(options,'iterations'))
-    options.iterations = 30;
+    options.iterations = 100;
 end
 
 if ~isfield(options,'plotting')
@@ -68,4 +69,8 @@ end
 
 if ~isfield(options,'printTimings')
 	options.printTimings = 0;
+end
+
+if ~isfield(options,'onlyInitialize')
+	options.onlyInitialize = 0;
 end
