@@ -50,12 +50,12 @@ numClasses = length(collector.options.EdgesPred) + length(collector.options.Laye
 numColumnsPred = length(collector.options.columnsPred);
 for i = 1:length(collector.options.columnsShape)
 	numColumnsShape(i) = length(collector.options.columnsShape{i});
-	% find the closest prediction-column to each shape-column
+	% the mapping prediction-columns to each shape-columns
 	for column = 1:numColumnsShape(i)
 		[a b] = min(abs(collector.options.columnsShape{i}(column) - collector.options.columnsPred));
 		columnsShapePred{i}(column) = b;
 	end
-	% find the to closest Shape columns for each Pred column for interpolation
+	% the mapping shape-columns to prediction-columns
 	for column=1:numColumnsPred
 		[a b] = sort(abs(collector.options.columnsPred(column) - collector.options.columnsShape{i}));
 		columnsPredShape{i}(:,column) = b(1:2);

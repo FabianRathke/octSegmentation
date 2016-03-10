@@ -61,7 +61,7 @@ if isfield(options,'segmentation')
 		variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
 		% calculate probabilities for first boundary
 		pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
-		q_c.singleton(volRegion,columnsShapePred{volRegion}(i),:,:) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs)';
+		q_c.singleton(volRegion,columnsPred(i),:,:) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs)';
 	end
 else
 	if 0

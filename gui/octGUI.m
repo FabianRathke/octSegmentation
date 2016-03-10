@@ -1,5 +1,4 @@
 function octGUI()
-margins = load('~/healthyMargins.mat');
 close all;
 
 % define global variables --> nested functions have access to these variables;
@@ -27,9 +26,9 @@ tab3 = uitab('Parent', tgroup, 'Title', 'Model params');
 tab4 = uitab('Parent', tgroup, 'Title', 'Shape mode viewer');
 
 % Position of BScan axes
-BScanBottom = 100; BScanLeft = 350; BScanWidth = 850; BScanHeight = 550; leftPos = BScanLeft;
+BScanBottom = 100; BScanLeft = 350; BScanWidth = 850; BScanHeight = 500; leftPos = BScanLeft;
 % position of mode axes
-ModeBottom = 310; ModeLeft = 300; ModeWidth = 650; ModeHeight = 380; subModeHeight = 150; subModeWidth = 250;
+ModeBottom = 310; ModeLeft = 300; ModeWidth = 650; ModeHeight = 350; subModeHeight = 150; subModeWidth = 250;
 
 % Position of SLO axes
 SLOBottom = 100; SLOLeft = 40; SLOWidth = 250; SLOHeight = 250;
@@ -169,6 +168,15 @@ function openFile_Callback(hObject,eventdata,handles)
 				BScanSeg{i} = BScanSeg{i}(:,end:-1:1);
 			end
 		end
+
+		% load variables for evaluating the error term
+		if numBScans > 1
+			margins = load([getenv('OCT_CODE_DIR') 'datafiles/healthyMargins3D.mat']);
+		else
+			margins = load([getenv('OCT_CODE_DIR') 'datafiles/healthyMargins2D.mat']);
+		end
+
+
 
 		% plot SLO scan
 		axes(axisSLO); reset(axisSLO); imagesc(sqrt(sqrt(SLO))); colormap gray; hold on;
@@ -533,7 +541,9 @@ function updateComposition_Callback(hObject,eventdata)
 	% calculate the composition based on the current z
 	comp = model.shapeModel(shapeModel).mu + model.shapeModel.WML*z;
 	axes(axisModeComp); reset(axisModeComp);
-	plot(reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
+	imagesc(sqrt(sqrt(BScanData{currentBScan}))); colormap(axisBScan,'gray'); hold on;
+	plot(collector.options.clipRange(1) - 1 + collector.options.columnsShape{1},reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
+%	plot(reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
 end
 
 function resetMode_Callback(hObject,eventdata)
@@ -552,7 +562,8 @@ function projMode_Callback(hObject,eventdata)
 		end
 		comp = model.shapeModel(shapeModel).mu + model.shapeModel.WML*z;
 		axes(axisModeComp); reset(axisModeComp);
-		plot(reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
+		imagesc(sqrt(sqrt(BScanData{currentBScan}))); colormap(axisBScan,'gray'); hold on;
+		plot(collector.options.clipRange(1) - 1 + collector.options.columnsShape{1},reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
 	end
 end
 

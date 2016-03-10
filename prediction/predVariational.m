@@ -73,7 +73,8 @@ for file = 1:length(files)
 
 	error_init = 0;
 	for volRegion = 1:collector.options.numRegionsPerVolume
-		q_c_plot = squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
+		z = size(q_c.singleton);
+		q_c_plot = squeeze(sum(permute(reshape(q_c.singleton(volRegion,:,:,:),[z(2:end) 1]),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
 
 		old_boundaries(volRegion,:,:) = q_c_plot;
 		output.prediction_init{file,volRegion} = q_c_plot;
@@ -88,7 +89,7 @@ for file = 1:length(files)
 		end
 	end
 	
-	% is this option is set, the prediction finishes now, and returns the initial prediction	
+	% if this option is set, the prediction stops now, and returns the initial prediction	
 	if options.onlyInitialize
 		output.q_c_singleton = q_c.singleton;
 		output.q_b{file} = [];
@@ -120,7 +121,8 @@ for file = 1:length(files)
 
 		change_per_iteration(iter) = 0;
 		for volRegion = 1:numVolRegions
-			boundaries(volRegion,:,:) = squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
+			z = size(q_c.singleton);
+			boundaries(volRegion,:,:) = squeeze(sum(permute(reshape(q_c.singleton(volRegion,:,:,:),[z(2:end),1]),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
          	change_per_iteration(iter) =  change_per_iteration(iter) + mean(mean(mean(abs(boundaries(volRegion,:,columnsShapePred{volRegion})-old_boundaries(volRegion,:,columnsShapePred{volRegion})))));
 		end
 		if sum(isnan(boundaries(:)))

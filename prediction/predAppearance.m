@@ -61,20 +61,22 @@ for i = 1:length(files)
 		for regionBScan = 1:collector.options.numRegionsPerBScan
 			% select the subset of patches beloning to the current region
 			idxSet = find(collector.options.columnsPred>=collector.options.BScanRegions(regionBScan,1) & collector.options.columnsPred<=collector.options.BScanRegions(regionBScan,2)); 
-			idxStart = 1 + (idxSet(1)-1)*collector.options.Y;
-			idxEnd = idxSet(end)*collector.options.Y;
-			numPatches = idxEnd-idxStart+1;
-			
-			% fetch the current set of patches
-			patchesCurrRegion = double(patches.data(idxStart:idxEnd,:));
-			
-			% pre-processing on patch-level (for preprocessing on scan-level see loadData.m)
-			for i = 1:length(collector.options.preprocessing.patchLevel)
-            	patchesCurrRegion = collector.options.preprocessing.patchLevel{i}{1}(patchesCurrRegion,collector.options.preprocessing.patchLevel{i},models(regionVolume,regionBScan,:));
-	        end
-	
-			% predict appearance terms
-			results(:,idxStart:idxEnd) = options.predAppearance(patchesCurrRegion,models(regionVolume,regionBScan,:));
+			if length(idxSet) > 0
+				idxStart = 1 + (idxSet(1)-1)*collector.options.Y;
+				idxEnd = idxSet(end)*collector.options.Y;
+				numPatches = idxEnd-idxStart+1;
+				
+				% fetch the current set of patches
+				patchesCurrRegion = double(patches.data(idxStart:idxEnd,:));
+				
+				% pre-processing on patch-level (for preprocessing on scan-level see loadData.m)
+				for i = 1:length(collector.options.preprocessing.patchLevel)
+					patchesCurrRegion = collector.options.preprocessing.patchLevel{i}{1}(patchesCurrRegion,collector.options.preprocessing.patchLevel{i},models(regionVolume,regionBScan,:));
+				end
+		
+				% predict appearance terms
+				results(:,idxStart:idxEnd) = options.predAppearance(patchesCurrRegion,models(regionVolume,regionBScan,:));
+			end
 		end
 
 		% post-processing (disciminative/generative, logarithmic/exponential output)
