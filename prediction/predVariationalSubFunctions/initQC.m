@@ -41,29 +41,43 @@ clear predictionA;
 initqc = tic;
 
 if isfield(options,'segmentation')
-	if ~isfield(models.shapeModel,'pTransV')
-		models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20);
+	if numVolRegions > 1
+		error('Not implemented for 3D models');
 	end
-%	for volRegion = 1:numVolRegions
+	% all columns with at least one boundary to segment
 	columnsToSegment = find(sum(options.idxRecalc)>0);
 
+	%if ~isfield(models.shapeModel,'pTransV')
+	%	models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20);
+	%	end
 	for j = 1:length(columnsToSegment)
 		i = columnsToSegment(j);
+		% calculate transition matrices
+	    for k = 2:numBounds
+			idx_a = columnsPredShape{1}(1,i) + (k-2)*numColumnsShape; idx_b = idx_a + numColumnsShape;
+
+			P = inv(WML([idx_a idx_b],:)*WML([idx_a idx_b],:)' + eye(2)*(sigmaML+40));
+			[iS jS sS numElements] = getCondTransMatrixC([models.shapeModel.mu(idx_a) models.shapeModel.mu(idx_b)]',P,int32(collector.options.Y),10^-20);
+			pTransV{k} = sparse(iS(1:numElements),jS(1:numElements),sS(1:numElements),collector.options.Y,collector.options.Y);
+		end
+
+		% clamp observation probabilities to previous segmentation
 		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i;
-		pObs = squeeze(prediction(:,:,columnsShapePred{volRegion}(i),volRegion));
+		pObs = squeeze(prediction(:,:,i,volRegion));
 		fixBounds = find(~options.idxRecalc(:,columnsToSegment(j)));
 		for k = 1:length(fixBounds)
 			pObs(:,fixBounds(k)) = zeros(numRows,1);
 			segm = options.segmentation(fixBounds(k),columnsToSegment(j));
 			pObs([floor(segm) ceil(segm)],fixBounds(k)) = [ceil(segm)-segm segm-floor(segm)];
 		end
-
+		
 		variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
-		% calculate probabilities for first boundary
+		% calculate prior probabilities for first boundary
 		pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
-		q_c.singleton(volRegion,columnsPred(i),:,:) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs)';
+		q_c.singleton(volRegion,i,:,:) = sumProductSparse(pStart,pTransV,pObs)';
 	end
 else
+	% old Matlab code
 	if 0
 		if ~isfield(models.shapeModel,'pTransV')
 			models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20);

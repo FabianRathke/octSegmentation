@@ -34,7 +34,7 @@ if strcmp(options.loadRoutineData,'spectralisMat')
 	B0(B0>10) = 0;
 	B0 = sqrt(sqrt(B0));
 	if length(options.mirrorBScan) > 0
-		if findstr(fileHeader.ScanPosition,options.mirrorBScan)
+		if findstr(ScanPosition,options.mirrorBScan)
 			B0 = B0(:,end:-1:1);
 		end
 	end

@@ -1,14 +1,17 @@
 function octGUI()
+if length(getenv('OCT_CODE_DIR')) == 0
+	error('Set system variable "OCT_CODE_DIR" to the toolbox directory via setenv');
+end
 close all;
 
 % define global variables --> nested functions have access to these variables;
 hLine = [];
 currentBScan = 0; numBScans = 0; currentAppLayer = 0; numModes = 0; currentMode = 0; modesPerView = 4; shapeModel = 1; z = [];
 BScanHeader = ''; BScanData = ''; BScanSeg = ''; SLO = ''; fileHeader = ''; predictions = ''; funcVal = ''; fileExt = '';
-model = ''; collector = '';
+model = ''; collector = ''; margins = '';
 fileNameScan = ''; pathNameScan = ''; pathNameGT = '';
 % initialize buttons above the BScan axis
-showDataQuality = ''; showShapeQuality = ''; showPred = ''; showPredInit = ''; noPred = ''; showAppearance = ''; switchAppearance = ''; showPredNew = ''; showQB = ''; showGT = ''; buttons = '';
+showDataQuality = ''; showEntropy = ''; showPred = ''; showPredInit = ''; noPred = ''; showAppearance = ''; switchAppearance = ''; showPredNew = ''; showQB = ''; showGT = ''; buttons = '';
 % initialize buttons above the SLO axis
 openFile = ''; selectFileType = ''; loadModel = ''; segmentBScan = ''; resegmentBScan = ''; addMode = ''; fileNameText = ''; nextBScan = ''; prevBScan = ''; selectBScan = ''; statusText = ''; selectGTDir = '';
 
@@ -24,6 +27,7 @@ tab1 = uitab('Parent', tgroup, 'Title', 'Viewer');
 tab2 = uitab('Parent', tgroup, 'Title', 'Scan params');
 tab3 = uitab('Parent', tgroup, 'Title', 'Model params');
 tab4 = uitab('Parent', tgroup, 'Title', 'Shape mode viewer');
+tab5 = uitab('Parent', tgroup, 'Title', 'BScan filter');
 
 % Position of BScan axes
 BScanBottom = 100; BScanLeft = 350; BScanWidth = 850; BScanHeight = 500; leftPos = BScanLeft;
@@ -63,6 +67,8 @@ selectGTDir = uicontrol('Parent',tab1,'Style','pushbutton','String','Select GT F
 loadModel = uicontrol('Parent',tab1,'Style','pushbutton','String','Load Model','Position',[60,BBottom+100,100,25],'Enable','off','Tag','loadModel','Callback',{@loadModel_Callback});
 % button to segment the currently display BScan
 segmentBScan = uicontrol('Parent',tab1,'Style','pushbutton','String','Segment','Position',[60,BBottom+140,80,25],'Enable','off','Tag','segmentBScan','Callback',{@segmentBScan_Callback});
+% set the alpha value
+setAlpha= uicontrol('Parent',tab1,'Style','edit','String','0.1','Position',[150,BBottom+140,50,25],'Enable','off','Tag','setAlpha');
 
 %resegmentBScan = uicontrol('Parent',tab1,'Style','pushbutton','String','Resegment','Position',[60,BBottom + 140,100,25],'Enable','off','Tag','resegmentBScan','Callback',{@resegmentBScan_Callback});
 %addMode = uicontrol('Parent',tab1,'Style','pushbutton','String','Add Mode','Position',[60,BBottom + 180,100,25],'Enable','off','Callback',{@addMode_Callback});
@@ -83,7 +89,7 @@ selectBScan = uicontrol('Parent',tab1,'Style','popupmenu','String','','Position'
 statusText = uicontrol('Parent',tab1,'Style','text','String','Waiting for action...','Position',[40,10,500,25],'Tag','statusText','HorizontalAlignment','Left');
 
 % buttons to show various segmentation results for the current BScan
-buttons = {{'showDataQuality','DataTerm',75},{'showShapeQuality','ShapeTerm',100},{'showPred','Pred',75},{'showPredNew','PredNew',20,'checkbox'},{'showPredInit','PredInit',100},{'showQB','QB',50},{'noPred','BScan',85},{'showGT','GT',50},{'showAppearance','AppTerms',85}};
+buttons = {{'showDataQuality','DataTerm',75},{'showEntropy','EntropyTerm',100},{'showPred','Pred',75},{'showPredNew','PredNew',20,'checkbox'},{'showPredInit','PredInit',100},{'showQB','QB',50},{'noPred','BScan',85},{'showGT','GT',50},{'showAppearance','AppTerms',85}};
 
 for i = 1:length(buttons)
     if length(buttons{i}) == 3
@@ -134,9 +140,6 @@ function openFile_Callback(hObject,eventdata,handles)
 	h = findobj('Tag','selectFileType');
 	String = get(h,'String');
 	Value = get(h,'Value');
-	if length(pathNameScan) == 0
-		pathNameScan = '/home/fabian/Documents/DatasetsWork/drusendaten';
-	end
 
 	if length(pathNameScan) > 0
 		[FileName,PathName,FilterIndex] = uigetfile(String{Value},'Load Scan',pathNameScan);
@@ -261,9 +264,9 @@ function switchBScan_Callback(hObject,eventdata)
 	end
 
 	if isfield(predictions{currentBScan},'funcVal')
-		set(showDataQuality,'Enable','on'); %set(showShapeQuality,'Enable','on');
+		set(showDataQuality,'Enable','on'); set(showEntropy,'Enable','on');
 	else
-		set(showDataQuality,'Enable','off'); set(showShapeQuality,'Enable','off');
+		set(showDataQuality,'Enable','off'); set(showEntropy,'Enable','off');
 	end
 end
 
@@ -320,7 +323,7 @@ function segmentBScan_Callback(hObject,eventdata)
 			set(showPred,'Enable','on'); set(showPredInit,'Enable','on'); set(resegmentBScan,'Enable','on'); set(showQB,'Enable','on');
 			set(showAppearance,'Enable','on'); currentAppLayer = 1; set(switchAppearance,'Enable','on');
 			displaySegmentation(predictions{currentBScan}.prediction{1},collector.options.columnsPred+collector.options.clipRange(1)-1);
-			set(showDataQuality,'Enable','on'); set(showShapeQuality,'Enable','off');
+			set(showDataQuality,'Enable','on'); set(showEntropy,'Enable','on');
 			% display unsigned error
 			if isfield(predictions{currentBScan},'unsignedError')
 				set(unsignedErrorText,'String',sprintf('Error: %.2f px | %.2f mum',predictions{currentBScan}.unsignedError,predictions{currentBScan}.unsignedError*3.87));
@@ -368,7 +371,7 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 		collector.options.mirrorBScan = '';
 	end
 	collector.options.loadRoutineData = ['spectralis' upper(fileExt(2)) fileExt(3:4)];
-	testFunc.name = @predVariational; testFunc.options = struct('calcFuncVal',1);
+	testFunc.name = @predVariational; testFunc.options = struct('calcFuncVal',1,'alpha',str2num(get(setAlpha,'String')));
 
 	% add params stored in the model file, in case they are not defined yet
 	fieldNames = fieldnames(model.params);
@@ -400,7 +403,7 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 		pred{i}.predictionInit = prediction.prediction_init{1};
 		pred{i}.appearance = prediction.appearanceTerms.prediction;
 		pred{i}.q_b = prediction.q_b{1};
-		set(showDataQuality,'Enable','on'); set(showShapeQuality,'Enable','off');			
+		set(showDataQuality,'Enable','on'); set(showEntropy,'Enable','off');			
 		pred{i}.funcVal = prediction.funcVal;
 		updateStatus(sprintf('Fnished segmenting BScan %d.',toSegment(i))); drawnow
 	end
@@ -441,10 +444,10 @@ function showDataQuality_Callback(hObject,eventdata)
 	makeQualityOverlay(predictions{currentBScan}.prediction{get(showPredNew,'Value')+1},squeeze(predictions{currentBScan}.funcVal{get(showPredNew,'Value')+1}.q_c_data),margins.mu(4,:),margins.sigma(4,:),collector.options.columnsPred+collector.options.clipRange(1)-1);
 end
 
-function showShapeQuality_Callback(hObject,eventdata)
+function showEntropy_Callback(hObject,eventdata)
 	h = displaySegmentation(predictions{currentBScan}.prediction{get(showPredNew,'Value')+1},collector.options.columnsPred+collector.options.clipRange(1)-1);
 	set(h(:),'Color',[0.8 0.8 1]);
-	makeQualityOverlay(predictions{currentBScan}.prediction{get(showPredNew,'Value')+1},squeeze(predictions{currentBScan}.funcVal{get(showPredNew,'Value')+1}.q_c_shape),margins.mu(3,:),margins.sigma(3,:),collector.options.columnsPred+collector.options.clipRange(1)-1);
+	makeQualityOverlay(predictions{currentBScan}.prediction{get(showPredNew,'Value')+1},squeeze(predictions{currentBScan}.funcVal{get(showPredNew,'Value')+1}.q_c_singleton),margins.mu(1,:),margins.sigma(1,:),collector.options.columnsPred+collector.options.clipRange(1)-1);
 end
 
 function showPredInit_Callback(hObject,eventdata)
@@ -461,7 +464,7 @@ end
 
 % load model
 function loadModel_Callback(hObject,eventdata)
-	[FileName,PathName,FilterIndex] = uigetfile('*.mat','Load Model','/home/fabian/Documents/Arbeit/Code/MyCode/OCT/datafiles');
+	[FileName,PathName,FilterIndex] = uigetfile('*.mat','Load Model',[getenv('OCT_CODE_DIR') '/datafiles']);
 
     if FileName ~= 0
 		tmp = load([PathName FileName],'model');
@@ -471,6 +474,7 @@ function loadModel_Callback(hObject,eventdata)
 		if length(fieldnames(model)) > 0
 			updateStatus('Model loaded.');
 			set(findobj('Tag','segmentBScan'),'Enable','on');
+			set(findobj('Tag','setAlpha'),'Enable','on');
 			set(findobj('Tag','segmentAllBScans'),'Enable','on');
 
 			% show first mode in the respective tab
@@ -539,11 +543,14 @@ function updateComposition_Callback(hObject,eventdata)
 		z(i+startMode) = str2num(get(selectModeComp(i),'String'));
 	end	
 	% calculate the composition based on the current z
-	comp = model.shapeModel(shapeModel).mu + model.shapeModel.WML*z;
+	comp = model.shapeModel(shapeModel).mu + model.shapeModel(shapeModel).WML*z;
 	axes(axisModeComp); reset(axisModeComp);
 	imagesc(sqrt(sqrt(BScanData{currentBScan}))); colormap(axisBScan,'gray'); hold on;
-	plot(collector.options.clipRange(1) - 1 + collector.options.columnsShape{1},reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
-%	plot(reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
+	if isstruct(collector)
+		plot(collector.options.clipRange(1) - 1 + collector.options.columnsShape{1},reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
+	else
+		plot(reshape(comp,length(model.shapeModel(shapeModel).columnsShape),[])); set(gca,'YDir','reverse');
+	end
 end
 
 function resetMode_Callback(hObject,eventdata)

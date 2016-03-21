@@ -39,16 +39,33 @@ if length(models.shapeModel) > 1
 	% set modified model as the new model
 	models = modelTmp;
 end
+
+if length(models.shapeModel) > 1
+	error('Reimplement full 3D shape prior');
+end
+
+% ************** DETERMINE CONNECTION BETWEEN QB AND QC ******************
+numBounds = length(collector.options.EdgesPred);
 collector.options.columnsShape = cell(1,numVolRegions);
 for i = 1:numVolRegions
-	collector.options.columnsShape{i} = models.shapeModel.columnsShape;
+	% cut shape model to subregion defined by columnsPred
+	minMaxColumns = [min(collector.options.columnsPred) max(collector.options.columnsPred)];
+	subsetColumns = find(models.shapeModel(i).columnsShape>=minMaxColumns(1) & models.shapeModel(i).columnsShape<=minMaxColumns(2));
+	%  
+	numColumns = length(models.shapeModel.columnsShape);
+	subsetColumnsFull = reshape((repmat(subsetColumns,numBounds,1)+repmat((0:numBounds-1)'.*numColumns,1,length(subsetColumns)))',1,[]);
+
+	models.shapeModel(i).mu = models.shapeModel(i).mu(subsetColumnsFull);
+	models.shapeModel(i).WML = models.shapeModel(i).WML(subsetColumnsFull,:);
+	models.shapeModel(i).columnsShape = models.shapeModel(i).columnsShape(subsetColumns);
+
+	collector.options.columnsShape{i} = models.shapeModel(i).columnsShape;
 end	
 	
-numBounds = length(collector.options.EdgesPred);
 numRows = collector.options.Y;
 numClasses = length(collector.options.EdgesPred) + length(collector.options.LayersPred);
 numColumnsPred = length(collector.options.columnsPred);
-for i = 1:length(collector.options.columnsShape)
+for i = 1:numVolRegions
 	numColumnsShape(i) = length(collector.options.columnsShape{i});
 	% the mapping prediction-columns to each shape-columns
 	for column = 1:numColumnsShape(i)
@@ -66,6 +83,7 @@ end
 columnsPredShapeVec = [columnsPredShape{:}];
 columnsPredShapeFactorVec = [columnsPredShapeFactor{:}];
 numColumnsShapeTotal = sum(numColumnsShape);
+% ******************** END *****************************************
 
 output.prediction = cell(length(files),numVolRegions);
 output.trueLabels = cell(length(files),numVolRegions);

@@ -10,7 +10,7 @@ for volRegion = 1:numVolRegions
 	for j = 1:numColumnsPred
 		for k = 1:numBounds
 			tmp = q_c.singleton(volRegion,j,k,:);
-			funcVal.q_c_singleton(volRegion,j,k) = sum(tmp(tmp~=0).*log(tmp(tmp~=0)));
+			funcVal.q_c_singleton(volRegion,j,k) = -sum(tmp(tmp~=0).*log(tmp(tmp~=0)));
 		end
 	end
 end
@@ -45,7 +45,7 @@ for volRegion = 1:numVolRegions
 		for j = 1:numColumnsPred
 			I = find(q_c.singleton(volRegion,j,k,:)~=0);
 			tmp = squeeze(q_c.singleton(volRegion,j,k,I))'.*squeeze(log(prediction(I,k,j,volRegion)))';
-			funcVal.q_c_data(volRegion,j,k) = - full(sum(tmp(~isnan(tmp)&~isinf(tmp))));
+			funcVal.q_c_data(volRegion,j,k) = -full(sum(tmp(~isnan(tmp)&~isinf(tmp))));
 %			tmp = q_c.pairwise{volRegion,j,k-1}.*log(omegaTerms{volRegion,k,j});
 %			funcVal.q_c_shape(volRegion,j,k) = - full(sum(tmp(~isnan(tmp)&~isinf(tmp)))); 
 		end
