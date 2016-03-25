@@ -32,8 +32,14 @@ pw = ([options.height options.width]-1)/2;
 [a filename] = fileparts(file.name);
 
 % determines which columns and which rows to fetch from the B-scan
-[a b] = meshgrid(options.columnsPred+pw(2),1+pw(1):options.Y+pw(1));
-idxSet = [reshape(b,1,options.Y*length(options.columnsPred)); reshape(a,1,options.Y*length(options.columnsPred))];
+if isfield(options,'idxSet')
+	idxSet = options.idxSet;
+	idxSet(1,:) = idxSet(1,:) + pw(1); 
+	idxSet(2,:) = idxSet(2,:) + pw(2);
+else
+	[a b] = meshgrid(options.columnsPred+pw(2),1+pw(1):options.Y+pw(1));
+	idxSet = [reshape(b,1,options.Y*length(options.columnsPred)); reshape(a,1,options.Y*length(options.columnsPred))];
+end
 testData = fetchPatches(filename,idxSet,options);
 testData.idx = int16(idxSet' - pw(ones(1,size(idxSet,2)),:));
 

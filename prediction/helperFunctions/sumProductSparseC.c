@@ -20,6 +20,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	const int* dims = mxGetDimensions(prhs[0]);
 	int numBounds = dims[1]; /* number of columns of pObs */
 	int numRows = mxGetM(prhs[0]); /* number of rows of pObs */
+ 	int numColumnsShape = (int) (double)N/(double)numBounds; /* for each column in the shape prior model there is one index */
+
 
 	/* only calculate pairiwse probabilities up to this precision */
 	double eps = pow(10,-30);
@@ -75,9 +77,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			for (k=0; k < numBounds-1; k++) {
 				var1 = 0; var2 = 0; var3 = 0;
 				for (i=0; i < M; i++) {
-					var1 += WML[idxA[column] + numColumns*k + i*N]*WML[idxA[column] + numColumns*k + i*N];
-					var2 += WML[idxA[column] + numColumns*k + i*N]*WML[idxA[column] + numColumns*(k+1) + i*N];
-					var3 += WML[idxA[column] + numColumns*(k+1) + i*N]*WML[idxA[column] + numColumns*(k+1) + i*N];
+					var1 += WML[idxA[column] + numColumnsShape*k + i*N]*WML[idxA[column] + numColumnsShape*k + i*N];
+					var2 += WML[idxA[column] + numColumnsShape*k + i*N]*WML[idxA[column] + numColumnsShape*(k+1) + i*N];
+					var3 += WML[idxA[column] + numColumnsShape*(k+1) + i*N]*WML[idxA[column] + numColumnsShape*(k+1) + i*N];
 				}
 				var1 += sigmaML;
 				var3 += sigmaML;
@@ -94,7 +96,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				factor = 1/sqrt(2*3.1415926535897*var_a_b);
 				/* calulate the number of elements larger than eps for each row */
 				cTmp = 0;
-				mu_b = mu[idxA[column] + numColumns*(k-1)]; mu_a = mu[idxA[column] + numColumns*k]; prec_a_b = prec[0 + (k-1)*2]; prec_a_a = prec[1 + (k-1)*2]; aTilde = prec_a_b/prec_a_a;
+				mu_b = mu[idxA[column] + numColumnsShape*(k-1)]; mu_a = mu[idxA[column] + numColumnsShape*k]; prec_a_b = prec[0 + (k-1)*2]; prec_a_a = prec[1 + (k-1)*2]; aTilde = prec_a_b/prec_a_a;
 				prec_a_aaTilde = 0.5*(1/prec_a_a)*prec_a_b*prec_a_b;
 	 			numNotZero = (int) ceil(abs(sqrt(-log(eps*factor)*2*var_a_b)/aTilde));
 				/* value of boundary k */
@@ -145,7 +147,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				/* calulate the number of elements larger than eps for each row */
 				numNotZero = (int) ceil(sqrt(-log(eps*factor)*2*var_a_b));
 				cTmp = 0;
-				mu_b = mu[idxA[column] + numColumns*(k-1)]; mu_a = mu[idxA[column] + numColumns*k]; prec_a_b = prec[0 + (k-1)*2]; prec_a_a = prec[1 + (k-1)*2]*0.5;
+				mu_b = mu[idxA[column] + numColumnsShape*(k-1)]; mu_a = mu[idxA[column] + numColumnsShape*k]; prec_a_b = prec[0 + (k-1)*2]; prec_a_a = prec[1 + (k-1)*2]*0.5;
 				for (boundB = 1; boundB <= numRows; boundB++) {
 					mu_a_b = mu_a - var_a_b*prec_a_b*(boundB-mu_b);
 					muFloor = (int) mu_a_b;

@@ -11,6 +11,7 @@ function patches = fetchPatches(filename,idxSet,options)
 % Outputs:
 %   patches - [struct]
 %      .data - [matrix] contains the patches
+%	   .positions - [matrix] containts the row/column indices
 %
 % See also: collectTrnData, collectTestData
 % Calls: loadLabels, loadData, wrapperGetRaster, getAugmentedImage

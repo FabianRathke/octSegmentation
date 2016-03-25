@@ -1,7 +1,79 @@
-%function [q_c output] = initQC(file,collector,models,options,q_c)
 if ~isfield(options,'appearance')
-	% fetch appearance Terms
-	predictionA = predAppearance(files(file),collector,models.appearanceModel,options);
+	% use prediction on a subset of columns to restrict the area that has to be taken into consideration
+	if length(collector.options.columnsPred) > 50 && isfield(collector.options,'margins')
+		volRegion = 1;
+		if numVolRegions > 1
+			error('Not implemented yet for 3D models');
+		end
+		columnsPred = collector.options.columnsPred; % save for later use
+		subVec = round(linspace(1+10,numColumnsPred-10,15)); % the subset of columns used for the initial prediction
+		collector.options.columnsPred = collector.options.columnsPred(subVec);
+
+		% fetch appearance Terms
+		predictionSparse = predAppearance(files(file),collector,models.appearanceModel,options);
+		prediction = permute(reshape(predictionSparse.prediction{volRegion},[numClasses,collector.options.Y,length(collector.options.columnsPred)]),[2 1 3]);
+		prediction = prediction(:,length(collector.options.LayersPred) + (1:length(collector.options.EdgesPred)),:);
+
+		% predict q_c
+      	idxA = columnsPredShape{volRegion}(1,subVec)-1;
+%		idxA = (1:length(subVec))-1; idxB = repmat(columnsPredShape{volRegion}(1,subVec),numBounds,1)' + repmat((0:(numBounds-1))*numColumnsShape,length(subVec),1);
+        q_c_init = permute(reshape(sumProductSparseC(prediction(:,:,:),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable),[numRows,numBounds,length(subVec)]),[3 2 1]);
+
+		% obtain estimated boundaries
+		z = size(q_c_init);
+		boundsInit = squeeze(sum(permute(q_c_init,[2 3 1]).*repmat(1:numRows,[numBounds,1,length(subVec)]),2))';
+
+		% obtain quality of estimate
+		for k = 1:numBounds
+			for j = 1:length(subVec)
+				I = find(q_c_init(j,k,:)>=10^-30);
+				tmp = squeeze(q_c_init(j,k,I))'.*squeeze(log(prediction(I,k,j)))';
+				q_c_data(j,k) = -full(sum(tmp(~isnan(tmp)&~isinf(tmp))));
+			end
+		end
+
+		% which entries do we trust?
+		idxTrust = q_c_data - repmat(collector.options.margins.mu(4,:),length(subVec),1)-repmat(collector.options.margins.sigma(4,:),length(subVec),1)*2 < 0;
+
+		% if several b-scan columns map to the same shape prior column we select a unique one here
+		[C IA] = unique(columnsShapePred{1}(subVec));
+		idxTrust = idxTrust(IA,:); boundsInit = boundsInit(IA,:);
+		idxGiven = repmat(C',1,numBounds)+repmat((0:(numBounds-1))*numColumnsShape,length(C),1);
+		idxGiven = idxGiven(idxTrust);
+		% get indices from the first and last boundary
+		idxCond = setdiff([[1:numColumnsShape] [1:numColumnsShape]+numColumnsShape*(numBounds-1)],[C(idxTrust(:,1)),C(idxTrust(:,end))+numColumnsShape*(numBounds-1)]); 
+		% obtain posterior mean
+		Sigma_b_b = sigmaML*eye(length(idxGiven)) + WML(idxGiven,:)*WML(idxGiven,:)'; 
+		Sigma_a_b = WML(idxCond,:)*WML(idxGiven,:)'; 
+		mu_a_b = models.shapeModel.mu(idxCond) + Sigma_a_b*inv(Sigma_b_b)*(boundsInit(idxTrust)-models.shapeModel.mu(idxGiven));
+		idxGiven = [C(idxTrust(:,1)),C(idxTrust(:,end))+numColumnsShape];	
+		idxCond(idxCond>numColumnsShape)= idxCond(idxCond>numColumnsShape) - numColumnsShape*7;
+
+		boundsFull(idxCond) = mu_a_b;
+		boundsFull(setdiff(1:numColumnsShape*2,idxCond)) = [boundsInit(idxTrust(:,1),1); boundsInit(idxTrust(:,end),end)];
+		boundsPred = round(reshape(boundsFull,numColumnsShape,2) + [-25*ones(numColumnsShape,1) 25*ones(numColumnsShape,1)]);
+		collector.options.columnsPred = columnsPred;
+
+		% create idxSet that contains positions of patches
+		idxSet = zeros(2,sum(boundsPred(:,2)-boundsPred(:,1)+1));
+		tmp = [arrayfun(@(x,y,z) ones(1,y-x+1)*z,boundsPred(:,1),boundsPred(:,2),collector.options.columnsPred','UniformOutput',false)];
+		idxSet(2,:) = [tmp{:}];
+		tmp = [arrayfun(@(x,y) colon(x,y),boundsPred(:,1),boundsPred(:,2),'UniformOutput',false)];
+		idxSet(1,:) = [tmp{:}];
+		collector.options.idxSet = idxSet;
+		
+		% fetch appearance terms
+		prediction = predAppearance(files(file),collector,models.appearanceModel,options);
+		predictionA.prediction{1} = zeros(size(prediction.prediction{1},1),numColumnsPred*collector.options.Y);
+		% change the index over columns from the real B-Scan to columnsPred
+		idxChange = zeros(1,collector.options.X);
+		idxChange(collector.options.columnsPred) = 1:numColumnsPred;
+		idxSet(2,:) = idxChange(idxSet(2,:));
+		IND = sub2ind([collector.options.Y numColumnsPred],idxSet(1,:),idxSet(2,:));
+		predictionA.prediction{1}(:,IND) = prediction.prediction{1};
+	else
+		predictionA = predAppearance(files(file),collector,models.appearanceModel,options);
+	end
 else
 	predictionA.prediction = options.appearance;
 end

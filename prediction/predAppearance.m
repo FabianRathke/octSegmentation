@@ -27,7 +27,6 @@ function output = predAppearance(files,collector,models,options)
 %     .prediction - [cell] pixel-wise probabilities for all classes and B-Scans
 %
 % See also: predGlasso, predVariational
-% TODO: Seperate pre-processing in seperate functions; controlled by the user
 
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
@@ -60,14 +59,10 @@ for i = 1:length(files)
 		% iterate over regions within the current B-scan
 		for regionBScan = 1:collector.options.numRegionsPerBScan
 			% select the subset of patches beloning to the current region
-			idxSet = find(collector.options.columnsPred>=collector.options.BScanRegions(regionBScan,1) & collector.options.columnsPred<=collector.options.BScanRegions(regionBScan,2)); 
-			if length(idxSet) > 0
-				idxStart = 1 + (idxSet(1)-1)*collector.options.Y;
-				idxEnd = idxSet(end)*collector.options.Y;
-				numPatches = idxEnd-idxStart+1;
-				
+			idxSet = patches.idx(:,2) >= collector.options.BScanRegions(regionBScan,1) & patches.idx(:,2)<=collector.options.BScanRegions(regionBScan,2);
+			if sum(idxSet) > 0
 				% fetch the current set of patches
-				patchesCurrRegion = double(patches.data(idxStart:idxEnd,:));
+				patchesCurrRegion = double(patches.data(idxSet,:));
 				
 				% pre-processing on patch-level (for preprocessing on scan-level see loadData.m)
 				for i = 1:length(collector.options.preprocessing.patchLevel)
@@ -75,7 +70,7 @@ for i = 1:length(files)
 				end
 		
 				% predict appearance terms
-				results(:,idxStart:idxEnd) = options.predAppearance(patchesCurrRegion,models(regionVolume,regionBScan,:));
+				results(:,idxSet) = options.predAppearance(patchesCurrRegion,models(regionVolume,regionBScan,:));
 			end
 		end
 
