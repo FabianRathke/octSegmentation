@@ -108,10 +108,10 @@ for file = 1:length(files)
 		% save last iterations prediction for convergence criteria
 		if iter > 1
 			old_boundaries = boundaries;
+		else
+			boundaries = old_boundaries;
 		end
 
-		% P and p terms
-		calcDer;
 		% optimize q_b
 		optQB;
 		% intializes omega matrices 
