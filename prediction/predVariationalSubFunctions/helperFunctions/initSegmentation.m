@@ -104,12 +104,21 @@ factorsPrecB = cell(1,numVolRegions);
 for volRegion = 1:numVolRegions
 	idxB = (1:numColumnsShape(volRegion)*(numBounds-1)) + sum(numColumnsShape(1:volRegion-1))*numBounds;
 	idxA = idxB + numColumnsShape(volRegion);
-	
-	for j = 1:length(idxB)
-		P = inv(models.shapeModel.WML([idxB(j) idxA(j)],:)*models.shapeModel.WML([idxB(j) idxA(j)],:)' + sigmaML*eye(2));
-		factorsPrecA{volRegion}(j) = P(2,2);
-		factorsPrecB{volRegion}(j) = P(2,1);
-	end
+
+	d = sum(WML(idxA,:).*WML(idxA,:),2) + sigmaML;
+	b = sum(WML(idxA,:).*WML(idxB,:),2);
+ 	a = sum(WML(idxB,:).*WML(idxB,:),2) + sigmaML;
+
+ 
+	tmp = 1./(a.*d - b.*b);
+	factorsPrecA{volRegion} = (tmp.*a)';
+	factorsPrecB{volRegion} = (-tmp.*b)';
+
+%	for j = 1:length(idxB)
+%		P = inv(models.shapeModel.WML([idxB(j) idxA(j)],:)*models.shapeModel.WML([idxB(j) idxA(j)],:)' + sigmaML*eye(2));
+%		factorsPrecA{volRegion}(j) = P(2,2);
+%		factorsPrecB{volRegion}(j) = P(2,1);
+%	end
 end
 
 factorsPrecAVec = [factorsPrecA{:}];
@@ -120,7 +129,7 @@ hashTable = sort(exp(-1000:0.001:0),'descend');
 
 
 % initialize 
-pred_update_varinit;
+%pred_update_varinit;
 
 % auslagerung optQC
 % calculate mu_a_b for all regions at once
@@ -134,8 +143,8 @@ idxB(idxNotB) = []; idxA(idxNotA) = [];
 
 A = 1:numRows;
 mu_a_b2 = (models.shapeModel.mu(idxB,ones(1,numRows)) - factorsPrecAVec(ones(1,numRows),:)'.^-1.*factorsPrecBVec(ones(1,numRows),:)'.*(A(ones(1,length(idxA)),:)-models.shapeModel.mu(idxA,ones(1,numRows))));
-mu_a_b2 =  eval(sprintf('%s(mu_a_b2)',collector.options.dataTypeCast));
-factorsPrecAVec = eval(sprintf('%s(factorsPrecAVec)',collector.options.dataTypeCast));
+%mu_a_b2 =  eval(sprintf('%s(mu_a_b2)',collector.options.dataTypeCast));
+%factorsPrecAVec = eval(sprintf('%s(factorsPrecAVec)',collector.options.dataTypeCast));
 
 % auslagerung calcOT
 X = 1:numRows;

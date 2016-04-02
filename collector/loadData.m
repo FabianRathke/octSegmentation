@@ -43,7 +43,7 @@ elseif strcmp(options.loadRoutineData,'spectralisVol')
 		ext = '.vol';
 	end
 	% which slice of the volume should be loaded
-	optionsVolImport = struct('BScansSelect',options.labelID);
+	optionsVolImport = struct('BScansSelect',options.labelID, 'verbose',0);
 	[BScanData fileHeader] = HDEVolImporter(options.folder_data,[name ext],optionsVolImport);
 	if (~iscell(BScanData))
 		error(sprintf('Loading %s failed',filename));

@@ -35,23 +35,21 @@ B0Aug = getAugmentedImage(B0,[options.height options.width]);
 A = repmat([1:options.height]',[options.width 1])';
 A = A(ones(1,size(idxSet,2)),:);
 a = idxSet(1,:)'-pw(1)-1;
-a = a(:,ones(1,size(A,2)));
-A = A + a;
+A = A + a(:,ones(1,size(A,2)));
 
 B = reshape(repmat(1:options.width,[options.height 1]),1,[]);
 B = B(ones(1,size(idxSet,2)),:);
 b = idxSet(2,:)'-pw(2)-1;
-b = b(:,ones(1,size(B,2)));
-B = B + b;
+B = B + b(:,ones(1,size(B,2)));
 
-indices = sub2ind(size(B0Aug),A,B);
+%indices = sub2ind(size(B0Aug),A,B);
+indices = A + (B-1)*size(B0Aug,1);
 %fprintf('Overhead when fetching patches in %.3f\n',toc);
-
 patches.data = B0Aug(indices);
 
 % center all patches
 if options.centerPatches
-	mean_tmp = mean(patches.data')';
+	mean_tmp = mean(patches.data,2);
 	patches.data = patches.data - mean_tmp(:,ones(1,patchSize));
 end
 

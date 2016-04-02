@@ -2,9 +2,7 @@ if collector.options.printTimings
 	optQBTic = tic;
 end
 
-
 % calc terms described as $\tilde{p}_{j,k}$ in the paper
-% P for Sigma is the same as P for mu
 if volRegion == 1
     factor = ((reshape(squeeze(boundaries(1,:,:))',[],1)-models.shapeModel.mu)'./sigma_tilde_squared);
     p_mu = factor*A_k_partial*WML'- factor*A_k_nonzero;
@@ -16,14 +14,8 @@ else
     end
 end
 
-
-% conjugate gradient: Ax = b ==> (K+\tilde{P})(\bar{mu}-\mu) =  \tilde{p}
-%x = conjgrad(P_mu + sigmaML^-1*eval(sprintf('eye(size(WML,1),%s)',collector.options.dataType)) - sigmaML^-1*WML*M*WML',-p_mu',eval(sprintf('zeros(1,length(p_mu),%s)',collector.options.dataType))');
-%q_b.mu = single(x) + models.shapeModel.mu;
-
-% alternative conjugate gradient for very large shape prior matrices, where the explicit representation is to expensive in terms of memory --> use low-rank representation
+% conjugate gradient using the low-rank decomposition of \Sigma
 x = zeros(length(p_mu),1);
-%x = reshape(q_c_plot',[],1)-models.shapeModel.mu;
 r = -p_mu';
 p=r;
 rsold=r'*r;

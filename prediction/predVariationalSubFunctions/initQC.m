@@ -17,7 +17,8 @@ if ~isfield(options,'appearance')
 		% predict q_c
       	idxA = columnsPredShape{volRegion}(1,subVec)-1;
 %		idxA = (1:length(subVec))-1; idxB = repmat(columnsPredShape{volRegion}(1,subVec),numBounds,1)' + repmat((0:(numBounds-1))*numColumnsShape,length(subVec),1);
-        q_c_init = permute(reshape(sumProductSparseC(prediction(:,:,:),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable),[numRows,numBounds,length(subVec)]),[3 2 1]);
+		boundsPred = [zeros(1,length(idxA)); ones(1,length(idxA))*(numRows-1)];
+        q_c_init = permute(reshape(sumProductSparseC(prediction(:,:,:),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred)),[numRows,numBounds,length(subVec)]),[3 2 1]);
 
 		% obtain estimated boundaries
 		z = size(q_c_init);
@@ -72,6 +73,7 @@ if ~isfield(options,'appearance')
 		IND = sub2ind([collector.options.Y numColumnsPred],idxSet(1,:),idxSet(2,:));
 		predictionA.prediction{1}(:,IND) = prediction.prediction{1};
 	else
+		boundsPred = [ones(numColumnsShape,1)  ones(numColumnsShape,1)*numRows];
 		predictionA = predAppearance(files(file),collector,models.appearanceModel,options);
 	end
 else
@@ -171,7 +173,7 @@ else
 	for volRegion = 1:numVolRegions
 		% the -1 is C-indexing
 		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + (1:numColumnsShape(volRegion)) - 1;
-		q_c.singleton(volRegion,columnsShapePred{volRegion},:,:) = permute(reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable),[numRows,numBounds,numColumnsShape(volRegion)]),[3 2 1]);
+		q_c.singleton(volRegion,columnsShapePred{volRegion},:,:) = permute(reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred')-1),[numRows,numBounds,numColumnsShape(volRegion)]),[3 2 1]);
 		% column-wise C-code (used only for testing)
 		%	offset = numColumnsShape(volRegion)*[0:numBounds-2];
 		% initialization only has to be made for columns relvant for updating the q(b) distribution

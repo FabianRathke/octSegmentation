@@ -2,13 +2,17 @@ tic;
 
 % calculate parameters of a Gaussian density, that is the product of two Gaussian densities (3.2.11 and 3.2.12 in the thesis)
 %  
-Sigma_c = (factorsPrecAVec + sigma_tilde_squared(idxB).^-1).^-1;
+Sigma_c = 1./(factorsPrecAVec + 1./sigma_tilde_squared(idxB));
 Sigma_c = eval(sprintf('%s(Sigma_c)',collector.options.dataTypeCast));
 
-mu_c = Sigma_c(ones(1,numRows),:).*(sigma_tilde_squared(ones(1,numRows),idxB).^-1.*mu_a_b(idxB,ones(1,numRows))') + Sigma_c(ones(1,numRows),:).*(factorsPrecAVec(ones(1,numRows),:).*mu_a_b2'); 
+mu_c = repmat(Sigma_c.*(1./sigma_tilde_squared(idxB).*mu_a_b(idxB)'),numRows,1) + repmat(Sigma_c.*factorsPrecAVec,numRows,1).*mu_a_b2';
 mu_c = eval(sprintf('%s(mu_c)',collector.options.dataTypeCast));
 
-c_c = (1./sqrt(2*pi*(factorsPrecAVec(ones(1,numRows),:).^-1) + sigma_tilde_squared(ones(1,numRows),idxB))'.*exp(-0.5*(mu_a_b2 - mu_a_b(idxB,ones(1,numRows))).^2.*(factorsPrecAVec(ones(1,numRows),:)'.^-1 + sigma_tilde_squared(ones(1,numRows),idxB)').^-1))';
+%c_c = (1./sqrt(2*pi*(factorsPrecAVec(ones(1,numRows),:).^-1) + sigma_tilde_squared(ones(1,numRows),idxB))'.*exp(-0.5*(mu_a_b2 - mu_a_b(idxB,ones(1,numRows))).^2.*(factorsPrecAVec(ones(1,numRows),:)'.^-1 + sigma_tilde_squared(ones(1,numRows),idxB)').^-1))';
+tmp = 1./(1./factorsPrecAVec + sigma_tilde_squared(idxB));
+tmp2 = (mu_a_b2 - mu_a_b(idxB,ones(1,numRows)))';
+c_c = repmat(sqrt(tmp)/sqrt(2*pi),numRows,1).*exp(-0.5*tmp2.*tmp2.*repmat(tmp,numRows,1));
+%c_c = (1./sqrt(2*pi*(1./factorsPrecAVec(ones(1,numRows),:).^-1 + sigma_tilde_squared(ones(1,numRows),idxB)))'.*exp(-0.5*(mu_a_b2 - mu_a_b(idxB,ones(1,numRows))).^2.*(factorsPrecAVec(ones(1,numRows),:)'.^-1 + sigma_tilde_squared(ones(1,numRows),idxB)').^-1))';
 c_c(c_c < options.thresholdAccuracy) = 0;
 c_c = eval(sprintf('%s(c_c)',collector.options.dataTypeCast));
 

@@ -12,6 +12,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	double sigmaML = (double) mxGetScalar(prhs[3]);
 	int* idxA = (int*) mxGetData(prhs[4]);
   	double *hashTable = mxGetPr(prhs[5]);
+	int* boundsPred = (int*) mxGetData(prhs[6]);
 
 /*	int* idxRows = (int*) mxGetPr(prhs[4]); */
 	int M = mxGetN(prhs[2]); /* number of eigenmodes of the shape prior */
@@ -24,7 +25,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 
 	/* only calculate pairiwse probabilities up to this precision */
-	double eps = pow(10,-30);
+	double eps = pow(10,-20);
 	double* gamma = NULL;
 	/* return the probabilities for this B-Scan column */
 	plhs[0] = mxCreateDoubleMatrix(1,numColumns*numBounds*numRows,mxREAL);
@@ -42,6 +43,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		double* c = malloc(numBounds*sizeof(double));
 		double cInv, cTmp;
 		double* prodTmp = malloc(numRows*sizeof(double));
+		int rowStart, rowEnd;
 		int boundA, boundB;
 		int numNotZero;
 		int i,k,idx,column,predOffset;
@@ -49,6 +51,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		double mu_b_a, mu_a_b, tmpVal, prec_a_aaTilde;
 		#pragma omp for	
 		for (column=0; column < numColumns; column++) {
+			rowStart = boundsPred[column*2]; rowEnd = boundsPred[column*2+1];
 			memset(alpha,0,numRows*numBounds*sizeof(double));
 			memset(beta,0,numRows*numBounds*sizeof(double));
 			predOffset = numBounds*numRows*column; /* shifts the pointer inside the prediction matrix to the next BScan column */
@@ -63,13 +66,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			factor = 1/sqrt(2*3.1415926535897*variance);
 
 			cTmp = 0;
-			for (i=0; i < numRows; i++) {
+			for (i=rowStart; i < rowEnd+1; i++) {
 				alpha[i] = factor*exp(varInv*(i+1 - mu[idxA[column]])*(i+1-mu[idxA[column]]))*prediction[i + predOffset];
 				cTmp += alpha[i];
 			}
 
 			c[0] = cTmp; cInv = 1/cTmp;
-			for (i=0; i < numRows; i++) {
+			for (i=rowStart; i < rowEnd+1; i++) {
 				alpha[i] = alpha[i]*cInv;
 			}
 
@@ -100,22 +103,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				prec_a_aaTilde = 0.5*(1/prec_a_a)*prec_a_b*prec_a_b;
 	 			numNotZero = (int) ceil(abs(sqrt(-log(eps*factor)*2*var_a_b)/aTilde));
 				/* value of boundary k */
-				for (boundA = 1; boundA <= numRows; boundA++) {
+				for (boundA = rowStart+1; boundA <= rowEnd; boundA++) {
 					mu_b_a = ((mu_a - boundA)/aTilde + mu_b);
 					muFloor = (int) mu_b_a;
 					/* the position of boundary k-1 can lie between 1 and boundary k and is constrained to lie within 2*numNotZero + 1 around its mean mu_b_a */
-					startVal = (muFloor-numNotZero < 1) ? 1 : muFloor - numNotZero;
+					startVal = (muFloor-numNotZero < rowStart+1) ? rowStart+1 : muFloor - numNotZero;
 					stopVal = (muFloor+numNotZero > boundA) ? boundA : muFloor + numNotZero;
 					tmpVal = 0;
 					/* value of boundary k-1 */
 					for (boundB = startVal; boundB <= stopVal; boundB++) {
 						/* evaluate the conditional density; but only the part inside the exp function */
 						evalDens = -(boundB-mu_b_a)*(boundB-mu_b_a)*prec_a_aaTilde;
-						if (evalDens < -10) {
-							evalDens = hashTable[(int)(-evalDens*1000 + 0.5)];
-						} else {
-							evalDens = exp(evalDens);
-						}
+						evalDens = hashTable[(int)(-evalDens*1000 + 0.5)];
 						tmpVal += factor*evalDens*alpha[boundB-1+numRows*(k-1)];
 					}
 					alpha[boundA-1+numRows*k] = tmpVal*prediction[boundA-1+numRows*k + predOffset];
@@ -123,13 +122,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				}
 				/* normalize alpha */
 				c[k] = cTmp; cInv = 1/cTmp;
-				for (i=0; i < numRows; i++) {
+				for (i=rowStart; i < rowEnd+1; i++) {
 					alpha[i+numRows*k] = alpha[i+numRows*k]*cInv;
 				}
 			}
 
 			/* initialize beta */
-			for (i=0; i < numRows; i++) {
+			for (i=rowStart; i < rowEnd+1; i++) {
 				idx = (numBounds-1)*numRows+i;
 				beta[idx] = 1;
 				gamma[idx + predOffset] = alpha[idx]*beta[idx];
@@ -138,7 +137,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		   for (k=numBounds-1; k > 0; k--) {
 				/* precalculate the product of pObs*beta(z_{n+1}) */
 				cInv = 1/c[k];
-				for (i=0; i < numRows; i++) {
+				for (i=rowStart; i < rowEnd+1; i++) {
 					prodTmp[i] = cInv*prediction[numRows*k+i + predOffset]*beta[numRows*k+i];
 				}
 
@@ -148,18 +147,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 				numNotZero = (int) ceil(sqrt(-log(eps*factor)*2*var_a_b));
 				cTmp = 0;
 				mu_b = mu[idxA[column] + numColumnsShape*(k-1)]; mu_a = mu[idxA[column] + numColumnsShape*k]; prec_a_b = prec[0 + (k-1)*2]; prec_a_a = prec[1 + (k-1)*2]*0.5;
-				for (boundB = 1; boundB <= numRows; boundB++) {
+				for (boundB = rowStart+1; boundB <= rowEnd; boundB++) {
 					mu_a_b = mu_a - var_a_b*prec_a_b*(boundB-mu_b);
 					muFloor = (int) mu_a_b;
 					/* position of boundary k (called here boundA) */
 					/* check for all possible values of boundB in this row: has to be at least boundA, can be at most numRows and we limit it to be not further away from muFloor than numNotZero */
 					startVal = (muFloor-numNotZero < boundB) ? boundB : muFloor - numNotZero;
-					stopVal = (muFloor+numNotZero > numRows) ? numRows : muFloor + numNotZero;
+					stopVal = (muFloor+numNotZero > rowEnd) ? rowEnd : muFloor + numNotZero;
 					tmpVal = 0;
 					for (boundA = startVal; boundA <= stopVal; boundA++) {
 						evalDens = -(boundA-mu_a_b)*(boundA-mu_a_b)*prec_a_a;
 						evalDens = hashTable[(int)(-evalDens*1000 + 0.5)];
-				/*		evalDens = exp(evalDens); */
 						tmpVal += factor*evalDens*prodTmp[boundA-1];
 					}
 					idx = boundB-1+numRows*(k-1);

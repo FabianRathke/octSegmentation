@@ -34,7 +34,13 @@ function output = predVariational(files,collector,params,models,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 05-May-2014
 
+if collector.options.printTimings
+	initSegTic = tic;
+end
 initSegmentation;
+if collector.options.printTimings
+   fprintf('[Init Seg]: %.3fs\n',toc(initSegTic));
+end
 
 if length(files) > 1
 	error('Debug: Prediction currently only works for one file');

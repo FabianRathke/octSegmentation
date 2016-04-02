@@ -16,14 +16,16 @@ for volRegion = 1:numVolRegions
 	for j = 1:numColumnsShape(volRegion)
 		idx_j = (j:numColumnsShape(volRegion):numColumnsShape(volRegion)*numBounds) + sum(numColumnsShape(1:volRegion-1))*numBounds;
 		
-		% use the CPU version of WML and M explicitly	
-		K_jj_inverse = inv(eye(numBounds)*sigmaML^-1 - sigmaML^-1*WML(idx_j,:)*M*WML(idx_j,:)');
+		% use the CPU version of WML and M explicitly
+		tmp = eye(numBounds)*sigmaML^-1 - sigmaML^-1*WML(idx_j,:)*M*WML(idx_j,:)';
+		K_jj_inverse = inv(tmp);
 		sigma_tilde_squared(idx_j) = K_jj_inverse(idx_diag)/options.alpha;
 
 		countJ = sum(numColumnsShape(1:volRegion-1)) + j; 
 		idxRange = (countJ-1)*numBounds^2 + 1:countJ*numBounds^2;
 		[idxI(idxRange) idxJ(idxRange)] = meshgrid(idx_j); 
 		s(idxRange) = K_jj_inverse(:);
+		s3(idxRange) = tmp(:);	
 
 		% calculating A_k^j: note that we do not need the sigma^-2I part, since we pull a part of K that does not include the diagonal
 		if collector.options.calcOnGPU
@@ -38,6 +40,7 @@ clear idx_*
 % cast to different data type if required
 sigma_tilde_squared = eval(sprintf('%s(sigma_tilde_squared);',collector.options.dataTypeCast));
 K_jj_inverse_block = sparse(idxI,idxJ,s);
+K_jj_block = sparse(idxI,idxJ,s3);
 A_k_nonzero = sparse(idxI,idxJ,s2);
 
 A_k_partial = -sigmaML^-1*K_jj_inverse_block*WML*M;

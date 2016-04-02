@@ -4,8 +4,10 @@ options = setDefaultOptions(options);
 
 HEADERSIZE = 2048;
 
-fprintf('Start reading...\n');
-fprintf('Filename: %s\n',filename);
+if options.verbose > 0
+	fprintf('Start reading...\n');
+	fprintf('Filename: %s\n',filename);
+end
 
 [pathstr,name,ext] = fileparts(filename);
 % in case there is no extension, set it to .vol
@@ -83,10 +85,12 @@ frewind(file);
 % read file header
 fileHeader = readHeader(file,fileHeaderStruct,numDataFields);
 
-if strcmp(fileHeader.ScanPosition(1:2),'OD')
-	fprintf('Right eye examined\n');
-else
-	fprintf('Left eye examined\n');
+if options.verbose > 0
+	if strcmp(fileHeader.ScanPosition(1:2),'OD')
+		fprintf('Right eye examined\n');
+	else
+		fprintf('Left eye examined\n');
+	end
 end
 
 % point file to end of header
@@ -166,14 +170,16 @@ if options.plotBScans
 	end	
 end
 
-fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),fileHeader.SizeX,fileHeader.SizeZ);
 % print aera covered by BScans
 sizeX = norm([BScanHeader{end}.EndX BScanHeader{end}.EndY]-[BScanHeader{end}.StartX BScanHeader{end}.StartY]);
 sizeY = norm([BScanHeader{end}.StartX BScanHeader{end}.StartY]-[BScanHeader{1}.StartX BScanHeader{1}.StartY]);
-fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXSlo,fileHeader.SizeYSlo,fileHeader.ScaleXSlo,fileHeader.ScaleYSlo);
-fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
-fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
-fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/fileHeader.NumBScans,sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans);
+if options.verbose > 0
+	fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),fileHeader.SizeX,fileHeader.SizeZ);
+	fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXSlo,fileHeader.SizeYSlo,fileHeader.ScaleXSlo,fileHeader.ScaleYSlo);
+	fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
+	fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
+	fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/fileHeader.NumBScans,sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans);
+end
 fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/fileHeader.NumBScans;
 
 if options.plotSLO
@@ -207,6 +213,10 @@ function options = setDefaultOptions(options)
 
 	if ~isfield(options,'plotBScans')
 		options.plotBScans = 0;
+	end
+
+	if ~isfield(options,'verbose')
+		verbose = 1;
 	end
 end
 
