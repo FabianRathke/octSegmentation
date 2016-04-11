@@ -1,3 +1,4 @@
+
 if ~isfield(options,'appearance')
 	% use prediction on a subset of columns to restrict the area that has to be taken into consideration
 	if length(collector.options.columnsPred) > 50 && isfield(collector.options,'margins')
@@ -34,7 +35,7 @@ if ~isfield(options,'appearance')
 		end
 
 		% which entries do we trust?
-		idxTrust = q_c_data - repmat(collector.options.margins.mu(4,:),length(subVec),1)-repmat(collector.options.margins.sigma(4,:),length(subVec),1)*2 < 0;
+		idxTrust = q_c_data - repmat(collector.options.margins.mu(4,:),length(subVec),1)-repmat(collector.options.margins.sigma(4,:),length(subVec),1)*1 < 0;
 
 		% if several b-scan columns map to the same shape prior column we select a unique one here
 		[C IA] = unique(columnsShapePred{1}(subVec));
@@ -48,7 +49,7 @@ if ~isfield(options,'appearance')
 		Sigma_a_b = WML(idxCond,:)*WML(idxGiven,:)'; 
 		mu_a_b = models.shapeModel.mu(idxCond) + Sigma_a_b*inv(Sigma_b_b)*(boundsInit(idxTrust)-models.shapeModel.mu(idxGiven));
 		idxGiven = [C(idxTrust(:,1)),C(idxTrust(:,end))+numColumnsShape];	
-		idxCond(idxCond>numColumnsShape)= idxCond(idxCond>numColumnsShape) - numColumnsShape*7;
+		idxCond(idxCond>numColumnsShape)= idxCond(idxCond>numColumnsShape) - numColumnsShape*(numBounds-2);
 
 		boundsFull(idxCond) = mu_a_b;
 		boundsFull(setdiff(1:numColumnsShape*2,idxCond)) = [boundsInit(idxTrust(:,1),1); boundsInit(idxTrust(:,end),end)];
@@ -111,7 +112,6 @@ if collector.options.saveAppearanceTerms
 end
 clear predictionA;
 
-% use old matlab code when conditioning on partial segmentation
 initqc = tic;
 
 if isfield(options,'segmentation')
@@ -148,7 +148,7 @@ if isfield(options,'segmentation')
 		variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
 		% calculate prior probabilities for first boundary
 		pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
-		q_c.singleton(volRegion,i,:,:) = sumProductSparse(pStart,pTransV,pObs)';
+		q_c.singleton(:,:,i,volRegion) = sumProductSparse(pStart,pTransV,pObs);
 	end
 else
 	% old Matlab code
@@ -165,7 +165,7 @@ else
 				variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
 				% calculate probabilities for first boundary
 				pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
-				q_c.singleton(volRegion,columnsShapePred{volRegion}(i),:,:) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs)';
+				q_c.singleton(:,:,columnsShapePred{volRegion}(i),volRegion) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs);
 			end
 		end
 	end
@@ -173,7 +173,7 @@ else
 	for volRegion = 1:numVolRegions
 		% the -1 is C-indexing
 		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + (1:numColumnsShape(volRegion)) - 1;
-		q_c.singleton(volRegion,columnsShapePred{volRegion},:,:) = permute(reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred')-1),[numRows,numBounds,numColumnsShape(volRegion)]),[3 2 1]);
+		q_c.singleton(:,:,columnsShapePred{volRegion},volRegion) = reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred')-1),[numRows,numBounds,numColumnsShape(volRegion)]);
 		% column-wise C-code (used only for testing)
 		%	offset = numColumnsShape(volRegion)*[0:numBounds-2];
 		% initialization only has to be made for columns relvant for updating the q(b) distribution

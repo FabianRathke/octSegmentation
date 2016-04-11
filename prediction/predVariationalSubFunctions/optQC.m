@@ -19,7 +19,7 @@ c_c = eval(sprintf('%s(c_c)',collector.options.dataTypeCast));
 % call the c-function in case we need not to calculate pairwise marginals
 timeCFunc = 0;
 a = tic; q_cc = optQCC(double(condQB),prediction,double(Sigma_c.^-1),double(mu_c),double(c_c),double(mu_a_b2'),numColumnsPred,numColumnsShape,columnsPredShapeVec(1,:),columnsPredShapeFactorVec(1,:),columnsPredShapeVec(2,:),columnsPredShapeFactorVec(2,:),double(factorsPrecAVec),hashTable); 
-q_c.singleton = permute(reshape(q_cc,[numRows,numBounds,numColumnsPred,numVolRegions]),[4,3,2,1]);
+q_c.singleton = reshape(q_cc,[numRows,numBounds,numColumnsPred,numVolRegions]);
 timeCFunc = toc(a);
 	
 if collector.options.printTimings
@@ -32,7 +32,7 @@ end
 if options.plotting
    for volRegion = 1:numVolRegions
 		idx = (1:numBounds*numColumnsShape(volRegion)) + sum(numColumnsShape(1:volRegion-1))*numBounds;
-		toPlot = squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
+		toPlot = squeeze(sum(q_c.singleton(:,:,:,volRegion).*repmat((1:numRows)',[1,numBounds,numColumnsPred])));
 		fileSaveName = sprintf('%s/qc_%d/%s_%d.eps',folderName,iter,filename,collector.options.labelIDs(volRegion));
 		eval(sprintf('plotBScan(B%d,toPlot,collector.options.columnsPred,fileSaveName)',collector.options.labelIDs(volRegion)));
     end

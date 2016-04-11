@@ -216,7 +216,7 @@ function options = setDefaultOptions(options)
 	end
 
 	if ~isfield(options,'verbose')
-		verbose = 1;
+		options.verbose = 1;
 	end
 end
 

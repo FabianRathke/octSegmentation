@@ -70,7 +70,7 @@ for file = 1:length(files)
 	end
 
 	if ~isfield(options,'q_c_singleton')
-		q_c.singleton = zeros(numVolRegions,numColumnsPred,numBounds,numRows);
+		q_c.singleton = zeros(numRows,numBounds,numColumnsPred,numVolRegions);
 %		[q_c output] = initQC(files(file),collector,models,options,q_c);
 		initQC;
 	else
@@ -79,8 +79,7 @@ for file = 1:length(files)
 
 	error_init = 0;
 	for volRegion = 1:collector.options.numRegionsPerVolume
-		z = size(q_c.singleton);
-		q_c_plot = squeeze(sum(permute(reshape(q_c.singleton(volRegion,:,:,:),[z(2:end) 1]),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
+		q_c_plot = squeeze(sum(q_c.singleton(:,:,:,volRegion).*repmat((1:numRows)',[1,numBounds,numColumnsPred])));
 
 		old_boundaries(volRegion,:,:) = q_c_plot;
 		output.prediction_init{file,volRegion} = q_c_plot;
@@ -127,8 +126,7 @@ for file = 1:length(files)
 
 		change_per_iteration(iter) = 0;
 		for volRegion = 1:numVolRegions
-			z = size(q_c.singleton);
-			boundaries(volRegion,:,:) = squeeze(sum(permute(reshape(q_c.singleton(volRegion,:,:,:),[z(2:end),1]),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2));
+			boundaries(volRegion,:,:) = squeeze(sum(q_c.singleton(:,:,:,volRegion).*repmat((1:numRows)',[1,numBounds,numColumnsPred])));
          	change_per_iteration(iter) =  change_per_iteration(iter) + mean(mean(mean(abs(boundaries(volRegion,:,columnsShapePred{volRegion})-old_boundaries(volRegion,:,columnsShapePred{volRegion})))));
 		end
 		if sum(isnan(boundaries(:)))
@@ -142,7 +140,7 @@ for file = 1:length(files)
 				if options.detailedOutput  
 					idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
 					q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
-					q_c_error(iter,volRegion,:) = sum(abs(squeeze(sum(permute(squeeze(q_c.singleton(volRegion,:,:,:)),[2 3 1]).*repmat(1:numRows,[numBounds,1,numColumnsPred]),2)) -output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+					q_c_error(iter,volRegion,:) = sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
 				end
 				unsigned_error(iter,volRegion) = sum(sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
 			end
