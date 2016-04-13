@@ -4,8 +4,23 @@ end
 
 % calc terms described as $\tilde{p}_{j,k}$ in the paper
 if volRegion == 1
-    factor = ((reshape(squeeze(boundaries(1,:,:))',[],1)-models.shapeModel.mu)'./sigma_tilde_squared);
-    p_mu = factor*A_k_partial*WML'- factor*A_k_nonzero;
+	if isfield(options,'doNotPredict')
+		idx_a = find(reshape(options.doNotPredict',1,[]));
+		idx_b = find(reshape(~options.doNotPredict',1,[]));
+		% inpainting of predicted boundaries using the conditional shape prior
+		tmp = reshape(squeeze(boundaries(1,:,:))',1,[])';
+%		muAB = models.shapeModel.mu(idx_a) - inv(sigmaML^-1*eye(length(idx_a)) - sigmaML^-1*WML(idx_a,:)*M*WML(idx_a,:)')*WML(idx_a,:)*M*(WML(idx_b,:)'*(tmp(idx_b)-models.shapeModel.mu(idx_b))); 
+%		tmp(idx_a) = muAB;
+%		tmp(idx_a) = WML(idx_a,:)*(M*WML(idx_b,:)'*(tmp(idx_b)-models.shapeModel.mu(idx_b))) + models.shapeModel.mu(idx_a);
+
+		factor = (tmp(idx_b)-models.shapeModel.mu(idx_b))./sigma_tilde_squared(idx_b)';
+%		factor = (tmp-models.shapeModel.mu)'./sigma_tilde_squared;
+		p_mu = WML*(A_k_partial(idx_b,:)'*factor) - A_k_nonzero(idx_b,:)'*factor;
+	else
+		factor = (reshape(squeeze(boundaries(1,:,:))',[],1)-models.shapeModel.mu)./sigma_tilde_squared';
+   		p_mu = WML*(A_k_partial'*factor) - A_k_nonzero'*factor;
+	end
+%    p_mu = factor'*A_k_partial*WML'- factor*A_k_nonzero;
 else
     p_mu = eval(sprintf('zeros(1,numColumnsShapeTotal*numBounds,%s);',collector.options.dataType));
     for volRegion = 1:numVolRegions
@@ -16,7 +31,7 @@ end
 
 % conjugate gradient using the low-rank decomposition of \Sigma
 x = zeros(length(p_mu),1);
-r = -p_mu';
+r = -p_mu;
 p=r;
 rsold=r'*r;
 

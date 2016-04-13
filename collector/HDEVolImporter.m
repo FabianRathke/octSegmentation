@@ -64,7 +64,9 @@ versionSize = {{'100',19}, {'101',26}, {'102',28}, {'103',31}};
 
 % read verion
 version = fread(file,12,'int8=>char');
-fprintf('Version: %s\n',version);
+if options.verbose > 0
+	fprintf('Version: %s\n',version);
+end
 version = version(9:fileHeaderStruct{2}{3}-1)';
 
 numDataFields = 0;

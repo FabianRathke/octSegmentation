@@ -2,8 +2,10 @@ function [BScanData, fileHeader, BScanHeader, BScanSeg, SLO] = HDEMatImporter(fo
 
 options = setDefaultOptions(options);
 
-fprintf('Start reading...\n');
-fprintf('Filename: %s\n',filename);
+if options.verbose > 0
+	fprintf('Start reading...\n');
+	fprintf('Filename: %s\n',filename);
+end
 
 [pathstr,name,ext] = fileparts(filename);
 % in case there is no extension, set it to .vol
@@ -119,11 +121,14 @@ if options.plotBScans
 	end	
 end
 
-fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),fileHeader.SizeX,fileHeader.SizeZ);
 % print aera covered by BScans
 sizeX = norm([BScanHeader{end}.EndX BScanHeader{end}.EndY]-[BScanHeader{end}.StartX BScanHeader{end}.StartY]);
 sizeY = norm([BScanHeader{end}.StartX BScanHeader{end}.StartY]-[BScanHeader{1}.StartX BScanHeader{1}.StartY]);
-fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXSlo,fileHeader.SizeYSlo,fileHeader.ScaleXSlo,fileHeader.ScaleYSlo);
+if options.verbose > 0
+	fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),fileHeader.SizeX,fileHeader.SizeZ);
+	fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXSlo,fileHeader.SizeYSlo,fileHeader.ScaleXSlo,fileHeader.ScaleYSlo);
+end
+
 if BScansNum > 1
 	fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
 	fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
@@ -162,5 +167,9 @@ function options = setDefaultOptions(options)
 
 	if ~isfield(options,'plotBScans')
 		options.plotBScans = 0;
+	end
+
+	if ~isfield(options,'verbose')
+		options.verbose = 0;
 	end
 end
