@@ -90,7 +90,7 @@ for file = 1:length(files)
 
 		if options.plotting
 			fileSaveName = sprintf('%s/init/qc_0%s_%d.eps',folderName,filename,collector.options.labelIDs(file,volRegion));
-			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName)',collector.options.labelIDs(file,volRegion)))
+			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName,idxPredictFull)',collector.options.labelIDs(file,volRegion)))
 		end
 	end
 	
@@ -175,6 +175,10 @@ for file = 1:length(files)
 
 			% clean after mex-functions
 			clear mex
+			
+			if options.plotting
+				fprintf('All plots written to %s\n',folderName);
+			end
 
 			break
 		end

@@ -152,39 +152,42 @@ if isfield(options,'segmentation')
 	end
 else
 	% old Matlab code
-	if 0
-		if ~isfield(models.shapeModel,'pTransV')
-			models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20);
-		end
+	if isfield(options,'doNotPredict')
+		models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20,~options.doNotPredict);
 		for volRegion = 1:numVolRegions
 			% initialization only has to be made for columns relvant for updating the q(b) distribution
 			for i = 1:numColumnsShape(volRegion)
-				idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i;
-				pObs = squeeze(prediction(:,:,columnsShapePred{volRegion}(i),volRegion));
-	
-				variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
-				% calculate probabilities for first boundary
-				pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
-				q_c.singleton(:,:,columnsShapePred{volRegion}(i),volRegion) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs);
+				idxPredict = find(~options.doNotPredict(:,i));
+				if length(idxPredict) > 0
+					%idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i;
+					pObs = squeeze(prediction(:,idxPredict,columnsShapePred{volRegion}(i),volRegion));
+		
+					idxA = i + (idxPredict(1)-1)*numColumnsShape;
+					variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
+					% calculate probabilities for first boundary
+					pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
+					q_c.singleton(:,idxPredict,columnsShapePred{volRegion}(i),volRegion) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs);
+				end
 			end
 		end
-	end
-	% C version; segments all columns for one BScan; needs as input the indices of the first boundary inside the shape model
-	for volRegion = 1:numVolRegions
-		% the -1 is C-indexing
-		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + (1:numColumnsShape(volRegion)) - 1;
-		q_c.singleton(:,:,columnsShapePred{volRegion},volRegion) = reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred')-1),[numRows,numBounds,numColumnsShape(volRegion)]);
-		% column-wise C-code (used only for testing)
-		%	offset = numColumnsShape(volRegion)*[0:numBounds-2];
-		% initialization only has to be made for columns relvant for updating the q(b) distribution
-		%	for i = 1:numColumnsShape(volRegion)
-		%		% the -1 is C-indexing
-		%		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i - 1;
-		%		idxA = [idxA+offset; idxA+offset+numColumnsShape(volRegion)];
-		%		pObs = squeeze(prediction(:,:,columnsShapePred{volRegion}(i),volRegion));
-		%		
-		%		q_c.singleton2(volRegion,columnsShapePred{volRegion}(i),:,:) = reshape(sumProductSparseBackup(pObs,models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable),[numRows numBounds])';
-		%	end
+	else
+		% C version; segments all columns for one BScan; needs as input the indices of the first boundary inside the shape model
+		for volRegion = 1:numVolRegions
+			% the -1 is C-indexing
+			idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + (1:numColumnsShape(volRegion)) - 1;
+			q_c.singleton(:,:,columnsShapePred{volRegion},volRegion) = reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred')-1),[numRows,numBounds,numColumnsShape(volRegion)]);
+			% column-wise C-code (used only for testing)
+			%	offset = numColumnsShape(volRegion)*[0:numBounds-2];
+			% initialization only has to be made for columns relvant for updating the q(b) distribution
+			%	for i = 1:numColumnsShape(volRegion)
+			%		% the -1 is C-indexing
+			%		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i - 1;
+			%		idxA = [idxA+offset; idxA+offset+numColumnsShape(volRegion)];
+			%		pObs = squeeze(prediction(:,:,columnsShapePred{volRegion}(i),volRegion));
+			%		
+			%		q_c.singleton2(volRegion,columnsShapePred{volRegion}(i),:,:) = reshape(sumProductSparseBackup(pObs,models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable),[numRows numBounds])';
+			%	end
+		end
 	end
 end
 q_c.singleton(q_c.singleton < options.threshold_q_c) = 0;

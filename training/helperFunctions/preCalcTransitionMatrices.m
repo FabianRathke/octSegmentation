@@ -1,4 +1,4 @@
-function model = preCalcTransitionMatrices(collector,model,eps,columnsSelect)
+function model = preCalcTransitionMatrices(collector,model,eps,idxPredict)
 % preCalcTransitionMatrices - given a PPCA shape model, precalcs transition matrices used during the initialization of the inference approach 
 %
 % Syntax:
@@ -56,9 +56,18 @@ else
         numColumns = length(collector.options.columnsShape{region});
         pTransTmp = cell(numColumns,numBounds);
         for i = 1:numColumns
+			if nargin == 4
+				idxPredictLocal = find(idxPredict(:,i)~=0);
+				numBounds = length(idxPredictLocal);
+			end
             for j = 2:numBounds
-                idx_a = i + (j-2)*numColumns;
-                idx_b = idx_a + numColumns;
+				if nargin == 4
+					idx_a = i + (idxPredictLocal(j-1)-1)*numColumns;
+					idx_b = i + (idxPredictLocal(j)-1)*numColumns;
+				else
+					idx_a = i + (j-2)*numColumns;
+                	idx_b = idx_a + numColumns;
+				end
                 P = inv(model(region).WML([idx_a idx_b],:)*model(region).WML([idx_a idx_b],:)' + eye(2)*model(region).sigmaML);
                 %pTransTmp{i,j} = sparse(getCondTransMatrix([model(region).mu(idx_a) model(region).mu(idx_b)]',P,collector.options.Y));
 				[iS jS sS numElements] = getCondTransMatrixC([model(region).mu(idx_a) model(region).mu(idx_b)]',P,int32(collector.options.Y),eps);

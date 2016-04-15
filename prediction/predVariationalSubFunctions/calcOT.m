@@ -13,8 +13,9 @@ end
 %end
 %mu_a_b = eval(sprintf('%s(mu_a_b)',collector.options.dataTypeCast));
 
-productB = sigmaML^-1*x - sigmaML^-1*WML*(prodWMT*x) - K_jj_block*x;
-mu_a_b = models.shapeModel.mu - K_jj_inverse_block*productB;
+productB = sigmaML^-1*x - sigmaML^-1*WML(idx_b,:)*(prodWMT(:,idx_b)*x) - K_jj_block(idx_b,idx_b)*x;
+mu_a_b = zeros(numColumns*numBounds,1);
+mu_a_b(idx_b) = models.shapeModel.mu(idx_b) - K_jj_inverse_block(idx_b,idx_b)*productB;
 
 tmp = X - mu_a_b(:,ones(1,numRows));
 condQB = repmat(1./sqrt(2*pi*sigma_tilde_squared),numRows,1).*exp((-0.5)*tmp.*tmp./sigma_tilde_squared(ones(1,numRows),:)')';

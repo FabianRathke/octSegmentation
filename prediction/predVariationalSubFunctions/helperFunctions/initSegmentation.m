@@ -102,23 +102,29 @@ prodWMT = prodWM';
 factorsPrecA = cell(1,numVolRegions);
 factorsPrecB = cell(1,numVolRegions);
 for volRegion = 1:numVolRegions
-	idxB = (1:numColumnsShape(volRegion)*(numBounds-1)) + sum(numColumnsShape(1:volRegion-1))*numBounds;
-	idxA = idxB + numColumnsShape(volRegion);
+	if isfield(options,'doNotPredict')
+		% for each image row detect preceding boundaries
+		idxA = []; idxB = [];
+		for j = 2:numBounds
+			for i = 1:numColumnsShape
+				if options.doNotPredict(j,i) == 0 && sum(~options.doNotPredict(1:j-1,i)) > 0
+					idxB = [idxB (j-1)*numColumnsShape + i];
+					idxA = [idxA (find(options.doNotPredict(1:j-1,i)==0,1,'last')-1)*numColumnsShape + i];
+				end
+			end
+		end
+	else
+		idxA = (1:numColumnsShape(volRegion)*(numBounds-1)) + sum(numColumnsShape(1:volRegion-1))*numBounds;
+		idxB = idxA + numColumnsShape(volRegion);
+	end
 
-	d = sum(WML(idxA,:).*WML(idxA,:),2) + sigmaML;
-	b = sum(WML(idxA,:).*WML(idxB,:),2);
- 	a = sum(WML(idxB,:).*WML(idxB,:),2) + sigmaML;
+	d = sum(WML(idxB,:).*WML(idxB,:),2) + sigmaML;
+	b = sum(WML(idxB,:).*WML(idxA,:),2);
+ 	a = sum(WML(idxA,:).*WML(idxA,:),2) + sigmaML;
 
- 
 	tmp = 1./(a.*d - b.*b);
-	factorsPrecA{volRegion} = (tmp.*a)';
-	factorsPrecB{volRegion} = (-tmp.*b)';
-
-%	for j = 1:length(idxB)
-%		P = inv(models.shapeModel.WML([idxB(j) idxA(j)],:)*models.shapeModel.WML([idxB(j) idxA(j)],:)' + sigmaML*eye(2));
-%		factorsPrecA{volRegion}(j) = P(2,2);
-%		factorsPrecB{volRegion}(j) = P(2,1);
-%	end
+	factorsPrecA{volRegion} = zeros(1,numColumnsShape*(numBounds-1)); factorsPrecA{volRegion}(idxB-numColumnsShape) = (tmp.*a)';
+	factorsPredB{volRegion} = zeros(1,numColumnsShape*(numBounds-1)); factorsPrecB{volRegion}(idxB-numColumnsShape) = (-tmp.*b)';
 end
 
 factorsPrecAVec = [factorsPrecA{:}];
@@ -127,24 +133,30 @@ factorsPrecBVec = [factorsPrecB{:}];
 % for the c-sum-product
 hashTable = sort(exp(-1000:0.001:0),'descend');
 
-
-% initialize 
-%pred_update_varinit;
+% indices for leaving out boundaries
+if isfield(options,'doNotPredict')
+    idx_a = find(reshape(options.doNotPredict',1,[]));
+    idx_b = find(reshape(~options.doNotPredict',1,[]));
+	idxPredictFull = ~options.doNotPredict;
+else
+	idx_a = [];
+    idx_b = 1:numColumnsShape*numBounds;
+	idxPredictFull = ones(numBounds,numColumnsShape);
+end
 
 % auslagerung optQC
 % calculate mu_a_b for all regions at once
-idxNotB = []; idxNotA = [];
-for volRegion = 1:numVolRegions
-	idxNotB = [idxNotB (1:numColumnsShape(volRegion))+sum(numColumnsShape(1:volRegion-1))*numBounds];
-	idxNotA = [idxNotA (1:numColumnsShape(volRegion))+sum(numColumnsShape(1:volRegion-1))*numBounds+(numBounds-1)*numColumnsShape(volRegion)];
-end
-idxA = 1:numColumnsShapeTotal*numBounds; idxB = idxA;
-idxB(idxNotB) = []; idxA(idxNotA) = [];
+%idxNotB = []; idxNotA = [];
+%for volRegion = 1:numVolRegions
+%	idxNotB = [idxNotB (1:numColumnsShape(volRegion))+sum(numColumnsShape(1:volRegion-1))*numBounds];
+%	idxNotA = [idxNotA (1:numColumnsShape(volRegion))+sum(numColumnsShape(1:volRegion-1))*numBounds+(numBounds-1)*numColumnsShape(volRegion)];
+%end
+%idxA = 1:numColumnsShapeTotal*numBounds; idxB = idxA;
+%idxB(idxNotB) = []; idxA(idxNotA) = [];
 
 A = 1:numRows;
-mu_a_b2 = (models.shapeModel.mu(idxB,ones(1,numRows)) - factorsPrecAVec(ones(1,numRows),:)'.^-1.*factorsPrecBVec(ones(1,numRows),:)'.*(A(ones(1,length(idxA)),:)-models.shapeModel.mu(idxA,ones(1,numRows))));
-%mu_a_b2 =  eval(sprintf('%s(mu_a_b2)',collector.options.dataTypeCast));
-%factorsPrecAVec = eval(sprintf('%s(factorsPrecAVec)',collector.options.dataTypeCast));
+mu_a_b2 = zeros(numColumnsShape*(numBounds-1),numRows);
+mu_a_b2(idxB-numColumnsShape,:) = (models.shapeModel.mu(idxB,ones(1,numRows)) - factorsPrecAVec(ones(1,numRows),idxB-numColumnsShape)'.^-1.*factorsPrecBVec(ones(1,numRows),idxB-numColumnsShape)'.*(A(ones(1,length(idxA)),:)-models.shapeModel.mu(idxA,ones(1,numRows))));
 
 % auslagerung calcOT
 X = 1:numRows;

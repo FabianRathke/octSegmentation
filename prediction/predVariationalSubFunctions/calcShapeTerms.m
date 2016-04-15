@@ -36,7 +36,6 @@ for volRegion = 1:numVolRegions
 		end
 	end
 end
-clear idx_*
 % cast to different data type if required
 sigma_tilde_squared = eval(sprintf('%s(sigma_tilde_squared);',collector.options.dataTypeCast));
 K_jj_inverse_block = sparse(idxI,idxJ,s);
