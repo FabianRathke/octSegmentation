@@ -93,7 +93,12 @@ for file = 1:length(files)
 			eval(sprintf('plotBScan(B%d,q_c_plot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName,idxPredictFull)',collector.options.labelIDs(file,volRegion)))
 		end
 	end
-	
+
+	if options.calcFuncVal
+		calcFuncVals;
+		output.funcValInit(file) = funcVal;
+	end
+
 	% if this option is set, the prediction stops now, and returns the initial prediction	
 	if options.onlyInitialize
 		output.q_c_singleton = q_c.singleton;

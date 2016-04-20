@@ -24,22 +24,25 @@ if ~isempty(filename)
 		mkdir(pathstr);
 	end
 	figure('visible','off');
-	imagesc(data); colormap gray; hold on;
-	if nargin > 4
-		for i = 1:size(prediction,1)
-			starts = find(([idxSet(i,1:end-1) 0] -[0 idxSet(i,1:end-1)])==1);
-			stops = find(([idxSet(i,1:end-1) 0] -[0 idxSet(i,1:end-1)])==-1);
-			for j = 1:length(starts)
-				plot(columns(starts(j):stops(j)-1),prediction(i,starts(j):stops(j)-1));
-			end
-		end
-	else
-		plot(columns,prediction);
-	end
-	print(filename,'-depsc2');
-	close all
 else
 	figure;
-	imagesc(data); colormap gray; hold on;
+end
+
+imagesc(data); colormap gray; hold on;
+if nargin > 4
+	cmap = lines(size(prediction,1));
+	for i = 1:size(prediction,1)
+		starts = find(([idxSet(i,1:end-1) 0] -[0 idxSet(i,1:end-1)])==1);
+		stops = find(([idxSet(i,1:end-1) 0] -[0 idxSet(i,1:end-1)])==-1);
+		for j = 1:length(starts)
+			plot(columns(starts(j):stops(j)-1),prediction(i,starts(j):stops(j)-1),'Color',cmap(i,:));
+		end
+	end
+else
 	plot(columns,prediction);
+end
+
+if ~isempty(filename)
+	print(filename,'-depsc2');
+	close all
 end

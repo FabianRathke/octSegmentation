@@ -7,6 +7,7 @@ function interpolation = loadLabels(filename,options)
 %     .folder_labels     - [string] points to the folder of [filename '_' options.labelID_coordinates]
 %     .labelID           - [int] Spectralis B-Scans are labeled B0,B1,..., for each ID there exists a mat-file with labels
 %     .clip              - [boolean] indicates whether to clip a B-Scan at the left and right border
+%     .clipFactor        - [int] the interval in y-direction (i.e. 2 means that every second column is grabbed)
 %     .clipRange         - [array](2) defines the left and right border of the B-Scan after clipping 
 %     .verbose           - [int] level of verbosity
 %     .loadRoutineLabels - [string] the user-defined routine that is used to load the labels
@@ -39,7 +40,7 @@ end
 printMessage(sprintf('Loaded labels for %s and region %d.\n',filename,options.labelID),2,options.verbose);
 
 if options.clip
-	interpolation = interpolation(:,options.clipRange(1):options.clipRange(2));
+	interpolation = interpolation(:,options.clipRange(1):options.clipFactor:options.clipRange(2));
 end
 
 end

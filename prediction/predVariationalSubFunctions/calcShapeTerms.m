@@ -10,11 +10,13 @@ idx_diag = 1:numBounds+1:numBounds^2;
 idxI = zeros(1,numColumnsShapeTotal*numBounds^2);
 idxJ = zeros(1,numColumnsShapeTotal*numBounds^2);
 s = zeros(1,numColumnsShapeTotal*numBounds^2);
- 
+%idx_all = 1:numColumnsShapeTotal*numBounds;
+
 % naive implementation for each image column
 for volRegion = 1:numVolRegions
 	for j = 1:numColumnsShape(volRegion)
 		idx_j = (j:numColumnsShape(volRegion):numColumnsShape(volRegion)*numBounds) + sum(numColumnsShape(1:volRegion-1))*numBounds;
+%		idx_not_j = idx_all; idx_not_j(idx_j) = [];
 		
 		% use the CPU version of WML and M explicitly
 		tmp = eye(numBounds)*sigmaML^-1 - sigmaML^-1*WML(idx_j,:)*M*WML(idx_j,:)';
@@ -32,7 +34,7 @@ for volRegion = 1:numVolRegions
 %^			A_k(idx_j,idx_not_j) = GPUsingle(K_jj_inverse{volRegion,j})*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
 		else
 			s2(idxRange) = reshape(K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_j),1,[]);
-%			A_k_nonzero(idx_j,idx_j) = K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_j);
+%			A_k(idx_j,idx_not_j) = K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_not_j);
 		end
 	end
 end

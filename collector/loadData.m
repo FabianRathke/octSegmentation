@@ -10,6 +10,7 @@ function B0 = loadData(filename,options)
 %     .labelID 	       	- [int] Spectralis B-Scans are labeled B0,B1,..., labelID is ID of the B-Scan to load
 %     .clip		       	- [boolean] indicates whether to clip a B-Scan at the left and right border
 %     .clipRange	   	- [array](2) defines the left and right border of the B-Scan after clipping
+%     .clipFactor	   	- [int] the interval in y-direction (i.e. 2 means that every second column is grabbed)
 %     .loadRoutineData 	- [string] the user-defined routine that is used to load the data
 %	  .mirrowBScan		- [string] defines a trigger to mirrow the scan (left/right eye)
 %
@@ -71,7 +72,7 @@ end
 printMessage(sprintf('Loaded data for %s and region %d.\n',filename,options.labelID),2,options.verbose);
 
 if options.clip
-	B0 = B0(:,options.clipRange(1):options.clipRange(2));
+	B0 = B0(:,options.clipRange(1):options.clipFactor:options.clipRange(2));
 end
 
 % apply scan-wise preprocessing

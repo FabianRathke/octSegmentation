@@ -2,6 +2,11 @@ if collector.options.printTimings
 	optQBTic = tic;
 end
 
+% DEBUG: direct implementation
+%x = (P_mu(idx_b,idx_b) + sigmaML^-1*eye(length(idx_b)) - sigmaML^-1*WML(idx_b,:)*M*WML(idx_b,:)')\p_mu(idx_b);
+
+
+
 % calc terms described as $\tilde{p}_{j,k}$ in the paper
 if volRegion == 1
 %	if isfield(options,'doNotPredict')
@@ -16,7 +21,8 @@ if volRegion == 1
 %		p_mu = WML*(A_k_partial(idx_b,:)'*factor) - A_k_nonzero(idx_b,:)'*factor;
 %	else
 	factor = (reshape(squeeze(boundaries(1,:,:))',[],1)-models.shapeModel.mu)./sigma_tilde_squared';
-	p_mu = WML(idx_b,:)*(A_k_partial(idx_b,:)'*factor(idx_b)) - A_k_nonzero(idx_b,idx_b)'*factor(idx_b);
+	p_mu = zeros(numColumnsShape*numBounds,1);
+	p_mu(idx_b) = WML(idx_b,:)*(A_k_partial(idx_b,:)'*factor(idx_b)) - A_k_nonzero(idx_b,idx_b)'*factor(idx_b);
 %	end
 %    p_mu = factor'*A_k_partial*WML'- factor*A_k_nonzero;
 else
@@ -28,8 +34,8 @@ else
 end
 
 % conjugate gradient using the low-rank decomposition of \Sigma
-x = zeros(length(p_mu),1);
-r = -p_mu;
+x = zeros(length(idx_b),1);
+r = -p_mu(idx_b);
 p=r;
 rsold=r'*r;
 
@@ -54,6 +60,12 @@ for i=1:10000000
 end
 q_b.mu = zeros(numColumnsShape*numBounds,1);
 q_b.mu(idx_b) = x + models.shapeModel.mu(idx_b);
+
+% Mahalonbis distance
+vec = q_b.mu(idx_b)-models.shapeModel.mu(idx_b);
+%distance = sqrt(sigmaML^-1*vec'*vec - sigmaML^-1*(vec'*WML)*M*(WML'*vec));
+z = M*(WML(idx_b,:)'*vec);
+fprintf('Distance of E[q_b] to shape prior: %.2f\n',norm(z));
 
 if collector.options.printTimings
    if collector.options.calcOnGPU

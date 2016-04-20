@@ -29,12 +29,13 @@ numVolRegions = length(collector.options.labelIDs);
 if length(models.shapeModel) > 1
 	for i = 1:numVolRegions
 		% calculate distance of i'th Bscan from the center scan in the volume (is at zero px)
-		dist = double((collector.options.labelIDs(i) - (floor(collector.options.numBScansPerVolume/2)+1))*collector.options.distBScans);
+		dist = double((collector.options.labelIDs(i) - (floor(double(collector.options.numBScansPerVolume)/2)+1))*collector.options.distBScans/collector.options.clipFactor);
 		% find closest B-scan in the shape model
 		[~,scanID] = min(abs(models.params.BScanPositions-dist));
 		fprintf('DEBUG: Distance to central scan is %.fpx, picked %d''th component of shape model\n',dist,scanID);
 		modelTmp.appearanceModel(i,:,:) = models.appearanceModel(scanID,:,:);
 		modelTmp.shapeModel(i) = models.shapeModel(scanID);
+		output.modelSelect{1}(i) = scanID;
 	end
 	% set modified model as the new model
 	models = modelTmp;
@@ -89,9 +90,20 @@ output.prediction = cell(length(files),numVolRegions);
 output.trueLabels = cell(length(files),numVolRegions);
 options.positions = 1:numRows;
 
+% indices for leaving out boundaries
+if isfield(options,'doNotPredict')
+    idx_a = find(reshape(options.doNotPredict',1,[]));
+    idx_b = find(reshape(~options.doNotPredict',1,[]));
+	idxPredictFull = ~options.doNotPredict;
+else
+	idx_a = [];
+    idx_b = 1:numColumnsShape*numBounds;
+	idxPredictFull = ones(numBounds,numColumnsShape);
+end
+
 % save for later use, save as short form for better code readability
 WML = models.shapeModel.WML; sigmaML = models.shapeModel.sigmaML;
-M = inv(WML'*WML + sigmaML*eye(size(WML,2)));
+M = inv(WML(idx_b,:)'*WML(idx_b,:) + sigmaML*eye(size(WML,2)));
 models.shapeModel.M = M;
 WML = eval(sprintf('%s(WML)',collector.options.dataTypeCast));
 M = eval(sprintf('%s(M)',collector.options.dataTypeCast));
@@ -132,17 +144,6 @@ factorsPrecBVec = [factorsPrecB{:}];
 
 % for the c-sum-product
 hashTable = sort(exp(-1000:0.001:0),'descend');
-
-% indices for leaving out boundaries
-if isfield(options,'doNotPredict')
-    idx_a = find(reshape(options.doNotPredict',1,[]));
-    idx_b = find(reshape(~options.doNotPredict',1,[]));
-	idxPredictFull = ~options.doNotPredict;
-else
-	idx_a = [];
-    idx_b = 1:numColumnsShape*numBounds;
-	idxPredictFull = ones(numBounds,numColumnsShape);
-end
 
 % auslagerung optQC
 % calculate mu_a_b for all regions at once
