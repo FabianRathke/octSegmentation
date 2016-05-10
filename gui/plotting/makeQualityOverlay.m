@@ -24,9 +24,9 @@ for i = 2:numR
 
 		for j = 1:length(starts)
 			if i == numR
-				idx = find(qualityData(starts(j):stops(j),k) > mu(k)+sigma(k)*ranges(i));
+				idx = find(qualityData(starts(j):stops(j)-1,k) > mu(k)+sigma(k)*ranges(i));
 			else
-				idx = find(qualityData(starts(j):stops(j),k) > mu(k)+sigma(k)*ranges(i-1) & qualityData(starts(j):stops(j),k) < mu(k)+sigma(k)*ranges(i));
+				idx = find(qualityData(starts(j):stops(j)-1,k) > mu(k)+sigma(k)*ranges(i-1) & qualityData(starts(j):stops(j)-1,k) < mu(k)+sigma(k)*ranges(i));
 			end
 			for j = 1:length(idx)
 				if j == length(idx) && idx(j) ~= length(valX)

@@ -17,6 +17,7 @@ showMask = ''; addToMask = ''; removeFromMask = ''; resetMask = '';
 openFile = ''; selectFileType = ''; loadModel = ''; segmentBScan = ''; fileNameText = ''; nextBScan = ''; prevBScan = ''; selectBScan = ''; statusText = ''; selectGTDir = '';
 % segmentation mask
 mask = '';
+plotCounter = 1;
 
 % *****************************************************
 % ********************* LAYOUT ************************
@@ -68,6 +69,7 @@ resetMode = uicontrol('Parent',tab4,'Style','pushbutton','String','Reset','Posit
 projMode = uicontrol('Parent',tab4,'Style','pushbutton','String','Proj. Pred','Position',[50,460,120,25],'Enable','off','Tag','prediction','Callback',{@projMode_Callback});
 projInitMode = uicontrol('Parent',tab4,'Style','pushbutton','String','Proj. PredInit','Position',[50,420,120,25],'Enable','off','Tag','predictionInit','Callback',{@projMode_Callback});
 projQBMode = uicontrol('Parent',tab4,'Style','pushbutton','String','Proj. QB','Position',[50,380,120,25],'Enable','off','Tag','q_b','Callback',{@projMode_Callback});
+zGrad = uicontrol('Parent',tab4,'Style','pushbutton','String','Gradient z','Position',[50,340,100,25],'Enable','off','Callback',{@zGrad_Callback});
 normZText = uicontrol('Parent',tab4,'Style','text','String','||z|| = 0','Position',[50,530,100,25],'HorizontalAlignment','Left');
 % ##############################################################
 
@@ -79,7 +81,9 @@ loadModel = uicontrol('Parent',tab1,'Style','pushbutton','String','Load Model','
 % button to segment the currently display BScan
 segmentBScan = uicontrol('Parent',tab1,'Style','pushbutton','String','Segment','Position',[60,BBottom+140,80,25],'Enable','off','Tag','segmentBScan','Callback',{@segmentBScan_Callback});
 % set the alpha value
-setAlpha= uicontrol('Parent',tab1,'Style','edit','String','0.1','Position',[150,BBottom+140,50,25],'Enable','off','Tag','setAlpha');
+setAlpha = uicontrol('Parent',tab1,'Style','edit','String','0.1','Position',[150,BBottom+140,50,25],'Enable','off','Tag','setAlpha');
+% plot
+printFigure = uicontrol('Parent',tab1,'Style','pushbutton','String','printFig','Position',[60,BBottom+180,100,25],'Enable','on','Callback',{@printFigure_Callback});
 
 fileNameText = uicontrol('Parent',tab1,'Style','text','String','No file loaded...','Position',[60 BBottom+270,250,25],'Tag','fileNameText','HorizontalAlignment','Left');
 modelNameText = uicontrol('Parent',tab1,'Style','text','String','No model loaded...','Position',[60 BBottom+240,250,25],'Tag','modelNameText','HorizontalAlignment','Left');
@@ -117,9 +121,11 @@ showMask = uicontrol('Parent',tab1,'Style','pushbutton','String','ShowMask','Pos
 addToMask = uicontrol('Parent',tab1,'Style','pushbutton','String','+','Position',[leftPos+85,BScanBottom+BScanHeight+50,40,25],'Enable','off','Callback',{@addToMask_Callback}); handlesVec{end+1} = 'addToMask';
 removeFromMask = uicontrol('Parent',tab1,'Style','pushbutton','String','-','Position',[leftPos+130,BScanBottom+BScanHeight+50,40,25],'Enable','off','Callback',{@removeFromMask_Callback}); handlesVec{end+1} = 'removeFromMask';
 resetMask = uicontrol('Parent',tab1,'Style','pushbutton','String','ResetMask','Position',[leftPos+185,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@resetMask_Callback}); handlesVec{end+1} = 'resetMask';
+autoMask = uicontrol('Parent',tab1,'Style','pushbutton','String','AutoMask','Position',[leftPos+275,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@autoMask_Callback}); handlesVec{end+1} = 'autoMask';
+
 % ####################################################
 
-handlesVec{end+1} = 'projMode'; handlesVec{end+1} = 'projQBMode'; handlesVec{end+1} = 'projInitMode';
+handlesVec{end+1} = 'projMode'; handlesVec{end+1} = 'projQBMode'; handlesVec{end+1} = 'projInitMode'; handlesVec{end+1} = 'zGrad';
 
 
 % *****************************************************
@@ -207,6 +213,7 @@ function openFile_Callback(hObject,eventdata,handles)
 		% plot SLO scan
 		axes(axisSLO); reset(axisSLO); imagesc(sqrt(sqrt(SLO))); colormap gray; hold on;
 		predictions = cell(1,numBScans);
+		mask = cell(1,numBScans);
 		% plot positions of BScans for volumes
 		if numBScans > 1
 			for n = 1:numBScans
@@ -291,15 +298,31 @@ function switchBScan_Callback(hObject,eventdata)
 	end
 end
 
+function printFigure_Callback(hObject,eventdata)
+	hfig = figure;
+	hax_new = copyobj(axisBScan, hfig);
+	set(gca, 'Units', 'normalized', 'Position', [.1 .1 .85 .8]);
+	set(get(gca,'Parent'),'Position',[200 50 860 600]);
+    set(gcf, 'PaperPositionMode', 'auto');
+	set(gca,'YTickLabels','');
+	set(gca,'XTickLabels','');
+	symbols = ['a':'z' 'A':'Z' '0':'9'];
+%	string = symbols(randi(length(symbols),1,10));
+
+	print(hfig,['plots/figure_' num2str(plotCounter) '.eps'],'-depsc2');
+	plotCounter = plotCounter + 1;
+	close(hfig);
+end
+
 function showQB_Callback(hObject,eventdata)
 	displaySegmentation(predictions{currentBScan}.q_b,columnsToPlot);
 end
 
 function showGT_Callback(hObject,eventdata)
-	maskSave = mask;
-	mask = zeros(size(mask));
+	maskSave = mask{currentBScan};
+	mask{currentBScan} = zeros(size(mask{currentBScan}));
 	displaySegmentation(BScanSeg{currentBScan},1:fileHeader.SizeX);
-	mask = maskSave;
+	mask{currentBScan}= maskSave;
 end
 
 
@@ -329,8 +352,8 @@ function segmentBScan_Callback(hObject,eventdata)
 		% if the currently displayed BSCan was segmented, display the prediction result
 		if toSegment(i) == currentBScan
 			% create mask and activate buttons
-			if length(mask) == 0
-				mask = zeros(size(predictions{currentBScan}.prediction)); 
+			if length(mask{currentBScan}) == 0
+				mask{currentBScan} = zeros(size(predictions{currentBScan}.prediction)); 
 			end
 			% active buttons that show the prediction and other results
 	        setButtonProps(handlesVec,{'Enable','on'});
@@ -365,8 +388,8 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 
 	collector.options.loadRoutineData = ['spectralis' upper(fileExt(2)) fileExt(3:4)];
 	testFunc.name = @predVariational; testFunc.options = struct('calcFuncVal',1,'alpha',str2num(get(setAlpha,'String')));
-	if sum(mask(:)) > 0
-		testFunc.options.doNotPredict = mask;
+	if sum(mask{currentBScan}(:)) > 0
+		testFunc.options.doNotPredict = mask{currentBScan};
 	end
 
 	% scan format, which has double resolution in y-dimension
@@ -446,10 +469,10 @@ function h = displaySegmentation(prediction,columns)
 	imagesc(sqrt(sqrt(BScanData{currentBScan}))); colormap(axisBScan,'gray'); hold on;
 	h = [];
 	cmap = lines(numBounds);
-	if sum(mask(:)) > 0
+	if sum(prediction(:)==0) > 0
 		for i = 1:size(prediction,1)
-			starts = find(([~mask(i,1:end-1) 0] -[0 ~mask(i,1:end-1)])==1);
-			stops = find(([~mask(i,1:end-1) 0] -[0 ~mask(i,1:end-1)])==-1);
+			starts = find(([~mask{currentBScan}(i,1:end-1) 0] -[0 ~mask{currentBScan}(i,1:end-1)])==1);
+			stops = find(([~mask{currentBScan}(i,1:end-1) 0] -[0 ~mask{currentBScan}(i,1:end-1)])==-1);
 			for j = 1:length(starts)
 				h(end+1) = plot(columns(starts(j):stops(j)-1),prediction(i,starts(j):stops(j)-1),'Color',cmap(i,:));
 			end
@@ -496,7 +519,13 @@ function loadModel_Callback(hObject,eventdata)
 
     if FileName ~= 0
 		tmp = load([PathName FileName],'model');
-		model = tmp.model;
+		try 
+			model = tmp.model;
+		catch
+			updateStatus('Invalid model file.');
+			return
+		end
+
 		tBScan = printDataInTable(tab3,model.params);
 		tBScan.Position(3) = tBScan.Extent(3); tBScan.Position(4) = tBScan.Extent(4);           
 		if length(fieldnames(model)) > 0
@@ -531,7 +560,7 @@ function addToMask_Callback(hObject,eventdata)
 	columnsSelect = find(columnsToPlot>rect(1) & columnsToPlot < rect(1)+rect(3));
 	% select boundaries
 	tmp = find(predictions{currentBScan}.prediction(:,columnsSelect) < rect(2) + rect(4) & predictions{currentBScan}.prediction(:,columnsSelect) > rect(2));
-	mask(tmp + numBounds*(columnsSelect(1)-1)) = 1;
+	mask{currentBScan}(tmp + numBounds*(columnsSelect(1)-1)) = 1;
 	renderMask();
 end
 
@@ -541,20 +570,26 @@ function removeFromMask_Callback(hObject,eventdata)
 	columnsSelect = find(columnsToPlot>rect(1) & columnsToPlot < rect(1)+rect(3));
 	% select boundaries
 	tmp = find(predictions{currentBScan}.prediction(:,columnsSelect) < rect(2) + rect(4) & predictions{currentBScan}.prediction(:,columnsSelect) > rect(2));
-	mask(tmp + numBounds*(columnsSelect(1)-1)) = 0;
+	mask{currentBScan}(tmp + numBounds*(columnsSelect(1)-1)) = 0;
 	renderMask();
 end
 
 function resetMask_Callback(hObject,eventdata)
-	mask = zeros(size(mask));
+	mask{currentBScan} = zeros(size(mask{currentBScan}));
+	renderMask();
 end
 
 function renderMask()
 	h = displaySegmentation(predictions{currentBScan}.prediction,columnsToPlot);
 	set(h(:),'Color',[0 0.8 0.1]);
-	makeQualityOverlay(predictions{currentBScan}.prediction,mask',zeros(1,numBounds),ones(1,numBounds)*0.01,columnsToPlot);
+	makeQualityOverlay(predictions{currentBScan}.prediction,mask{currentBScan}',zeros(1,numBounds),ones(1,numBounds)*0.01,columnsToPlot);
 end
 
+function autoMask_Callback(hObject,eventdata)
+	[mask{currentBScan} E Eafter] = calcMask(predictions{currentBScan}.prediction,predictions{currentBScan}.predictionInit,squeeze(predictions{currentBScan}.funcVal.q_c_data),squeeze(predictions{currentBScan}.funcValInit.q_c_data),margins);
+	mask{currentBScan}(predictions{currentBScan}.prediction==0) = 1;
+	renderMask();
+end
 
 % ################# SHAPE PRIOR VIEWER CALLBACKS  #############
 
@@ -609,17 +644,17 @@ function updateComposition_Callback(hObject,eventdata)
 		z(i+startMode) = str2num(get(selectModeComp(i),'String'));
 	end	
 	% calculate the composition based on the current z
-	if length(mask) == 0
+	if length(mask{currentBScan}) == 0
 		idx_b = 1:size(model.shapeModel(shapeModel(currentBScan)).WML,1);
 	else
-		idx_b = find(reshape(~mask',1,[]));
+		idx_b = find(reshape(~mask{currentBScan}',1,[]));
 	end
 	comp = zeros(size(model.shapeModel(shapeModel(currentBScan)).WML,1),1);
 	comp(idx_b) = model.shapeModel(shapeModel(currentBScan)).mu(idx_b) + model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:)*z;
 	axes(axisModeComp); reset(axisModeComp);
 	if isstruct(collector)
 		imagesc(sqrt(sqrt(BScanData{currentBScan}))); colormap(axisBScan,'gray'); hold on;
-		plotWithMask(columnsToPlot,reshape(comp,length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[])',mask); set(gca,'YDir','reverse');
+		plotWithMask(columnsToPlot,reshape(comp,length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[])',mask{currentBScan}); set(gca,'YDir','reverse');
 	else
 		plot(reshape(comp,length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[])); set(gca,'YDir','reverse');
 	end
@@ -644,7 +679,7 @@ end
 
 function projModeFunc(prediction)
 	if isfield(predictions{currentBScan},'prediction')
-		idx_b = find(reshape(~mask',1,[]));
+		idx_b = find(reshape(~mask{currentBScan}',1,[]));
 		M = model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:)'*model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:) + eye(numModes)*model.shapeModel(shapeModel(currentBScan)).sigmaML;
 		z = inv(M)*(model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:)'*(prediction(idx_b) - model.shapeModel(shapeModel(currentBScan)).mu(idx_b)));
 		% update z-vec length field
@@ -657,14 +692,42 @@ function projModeFunc(prediction)
 		axes(axisModeComp); reset(axisModeComp);
 		imagesc(sqrt(sqrt(BScanData{currentBScan}))); colormap(axisBScan,'gray'); hold on;
 
-		plotWithMask(columnsToPlot,reshape(comp,length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[])',mask); set(gca,'YDir','reverse');
+		plotWithMask(columnsToPlot,reshape(comp,length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[])',mask{currentBScan}); set(gca,'YDir','reverse');
 	end
+end
+
+function zGrad_Callback(hObject,eventdata)
+	idx_b = find(reshape(~mask{currentBScan}',1,[]));
+    M = inv(model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:)'*model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:) + eye(numModes)*model.shapeModel(shapeModel(currentBScan)).sigmaML);
+	tmp = reshape(predictions{currentBScan}.prediction',[],1);
+	vec = tmp(idx_b) - model.shapeModel(shapeModel(currentBScan)).mu(idx_b);
+	tmp = M*model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:)';
+	% calc gradient of norm(z)
+	grad = zeros(size(model.shapeModel(shapeModel(currentBScan)).WML,1),1);
+	for i = 1:size(model.shapeModel(shapeModel(currentBScan)).WML,2)
+	    P = tmp(i,:)'*tmp(i,:);
+	    grad(idx_b) = grad(idx_b) + P*vec;
+	end
+	grad = grad/norm(z);
+%	axes(axisModeComp); reset(axisModeComp);
+	figure;
+	subplot(3,1,[1,2]); 
+	imagesc(sqrt(sqrt(BScanData{currentBScan}))); colormap(axisBScan,'gray'); colormap gray; hold on;
+	plotWithMask(columnsToPlot,predictions{currentBScan}.prediction,mask{currentBScan}); set(gca,'YDir','reverse');
+	subplot(3,1,3);
+	plot(columnsToPlot,(reshape(grad,length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[])));
+	set(gca,'XLim',[1 size(BScanData{currentBScan},2)]);
+	h = line([1 size(BScanData{currentBScan},2)],[0 0]);
+	set(h,'Color',[0.7 0.7 0.7]);
 end
 
 % ############### END SHAPE PRIOR VIEWER CALLBACKS #####################
 
 function plotWithMask(columns,toPlot,mask)
     cmap = lines(numBounds);
+	if length(mask) == 0
+		mask = zeros(size(toPlot));
+	end
 	for i = 1:size(toPlot,1)
 		starts = find(([~mask(i,1:end-1) 0] -[0 ~mask(i,1:end-1)])==1);
 		stops = find(([~mask(i,1:end-1) 0] -[0 ~mask(i,1:end-1)])==-1);

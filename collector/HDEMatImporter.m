@@ -85,6 +85,10 @@ BScansNum = sum(cell2mat(regexpi(varnames,'^B\d{1,}$')));
 if BScansNum == 1
 	fileHeader.NumBScans = BScansNum;
 end
+if ~isfield(fileHeader,'ScanPosition')
+	fileHeader.ScanPosition = 'OS';
+end
+
 BScanSeg = cell(BScansNum,1);
 BScanData = cell(BScansNum,1); 
 BScanHeader = cell(BScansNum,1);
@@ -100,8 +104,6 @@ for n = 1:BScansNum
 	for i = 1:length(headerVars)
 		if BScansNum > 1
 			eval(sprintf('BScanHeader{%d}.%s = B%d%s;',n,headerVars{i},n-1,headerVars{i}));
-		else
-			eval(sprintf('BScanHeader{%d}.%s = %s;',n,headerVars{i},headerVars{i}));
 		end
 	end
 end
@@ -122,19 +124,20 @@ if options.plotBScans
 end
 
 % print aera covered by BScans
-sizeX = norm([BScanHeader{end}.EndX BScanHeader{end}.EndY]-[BScanHeader{end}.StartX BScanHeader{end}.StartY]);
-sizeY = norm([BScanHeader{end}.StartX BScanHeader{end}.StartY]-[BScanHeader{1}.StartX BScanHeader{1}.StartY]);
-if options.verbose > 0
-	fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),fileHeader.SizeX,fileHeader.SizeZ);
-	fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXSlo,fileHeader.SizeYSlo,fileHeader.ScaleXSlo,fileHeader.ScaleYSlo);
-end
 
+fileHeader.distanceBScans = 0;
 if BScansNum > 1 && options.verbose > 0
-	fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
-	fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
-	fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/double(fileHeader.NumBScans-1),sizeY/fileHeader.ScaleYSlo/double(fileHeader.NumBScans-1));
+	sizeX = norm([BScanHeader{end}.EndX BScanHeader{end}.EndY]-[BScanHeader{end}.StartX BScanHeader{end}.StartY]);
+	sizeY = norm([BScanHeader{end}.StartX BScanHeader{end}.StartY]-[BScanHeader{1}.StartX BScanHeader{1}.StartY]);
+	if options.verbose > 0
+		fprintf('Number of BScans: %d, resolution: %d px x %d px\n',length(BScanHeader),fileHeader.SizeX,fileHeader.SizeZ);
+		fprintf('Size SLO Scan: %.d x %.d; mm per Pixel: %.4f, %.4f\n',fileHeader.SizeXSlo,fileHeader.SizeYSlo,fileHeader.ScaleXSlo,fileHeader.ScaleYSlo);
+		fprintf('Area covered (X x Y): %.2f mm x %.2f mm = %.2f mm^2\n',sizeX,sizeY,sizeX*sizeY);
+		fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
+		fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/double(fileHeader.NumBScans-1),sizeY/fileHeader.ScaleYSlo/double(fileHeader.NumBScans-1));
+	end
+	fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/double(fileHeader.NumBScans-1);
 end
-fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/double(fileHeader.NumBScans-1);
 
 if options.plotSLO
 	figure; imagesc(sqrt(sqrt(SLO))); t = title(['SLO ' filename]); colormap gray;

@@ -39,6 +39,8 @@ if length(models.shapeModel) > 1
 	end
 	% set modified model as the new model
 	models = modelTmp;
+else
+	output.modelSelect{1}(1) = 1;
 end
 
 if length(models.shapeModel) > 1

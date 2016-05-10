@@ -89,10 +89,10 @@ else
 		if ~isfield(options,'clipRange') 
 			error('Please specify the clip range in options.clipRange');
 		end
-		if ~isfield(options,'clipFactor')
-			options.clipFactor = 1;
-		end
 	end
+end
+if ~isfield(options,'clipFactor')
+	options.clipFactor = 1;
 end
 
 if length(files) > 0
