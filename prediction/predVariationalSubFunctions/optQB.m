@@ -20,7 +20,7 @@ if volRegion == 1
 %%		factor = (tmp-models.shapeModel.mu)'./sigma_tilde_squared;
 %		p_mu = WML*(A_k_partial(idx_b,:)'*factor) - A_k_nonzero(idx_b,:)'*factor;
 %	else
-	factor = (reshape(squeeze(boundaries(1,:,:))',[],1)-models.shapeModel.mu)./sigma_tilde_squared';
+	factor = (reshape(squeeze(boundaries(1,:,columnsShapePred{1}))',[],1)-models.shapeModel.mu)./sigma_tilde_squared';
 	p_mu = zeros(numColumnsShape*numBounds,1);
 	p_mu(idx_b) = WML(idx_b,:)*(A_k_partial(idx_b,:)'*factor(idx_b)) - A_k_nonzero(idx_b,idx_b)'*factor(idx_b);
 %	end

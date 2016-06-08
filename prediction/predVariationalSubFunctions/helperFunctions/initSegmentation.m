@@ -61,6 +61,7 @@ for i = 1:numVolRegions
 	models.shapeModel(i).mu = models.shapeModel(i).mu(subsetColumnsFull);
 	models.shapeModel(i).WML = models.shapeModel(i).WML(subsetColumnsFull,:);
 	models.shapeModel(i).columnsShape = models.shapeModel(i).columnsShape(subsetColumns);
+	numColumns = length(models.shapeModel.columnsShape);
 
 	collector.options.columnsShape{i} = models.shapeModel(i).columnsShape;
 end	
@@ -94,9 +95,11 @@ options.positions = 1:numRows;
 
 % indices for leaving out boundaries
 if isfield(options,'doNotPredict')
-    idx_a = find(reshape(options.doNotPredict',1,[]));
-    idx_b = find(reshape(~options.doNotPredict',1,[]));
-	idxPredictFull = ~options.doNotPredict;
+	% first, move from predColumns to shapeColumns
+	options.doNotPredictShape = options.doNotPredict(:,columnsShapePred{1}(1,:));
+    idx_a = find(reshape(options.doNotPredictShape',1,[]));
+    idx_b = find(reshape(~options.doNotPredictShape',1,[]));
+	idxPredictFull = ~options.doNotPredictShape;
 else
 	idx_a = [];
     idx_b = 1:numColumnsShape*numBounds;
@@ -105,6 +108,9 @@ end
 
 % save for later use, save as short form for better code readability
 WML = models.shapeModel.WML; sigmaML = models.shapeModel.sigmaML;
+if isfield(options,'variance')
+	sigmaML = sigmaML*options.variance;
+end
 M = inv(WML(idx_b,:)'*WML(idx_b,:) + sigmaML*eye(size(WML,2)));
 models.shapeModel.M = M;
 WML = eval(sprintf('%s(WML)',collector.options.dataTypeCast));
@@ -116,14 +122,14 @@ prodWMT = prodWM';
 factorsPrecA = cell(1,numVolRegions);
 factorsPrecB = cell(1,numVolRegions);
 for volRegion = 1:numVolRegions
-	if isfield(options,'doNotPredict')
+	if isfield(options,'doNotPredictShape')
 		% for each image row detect preceding boundaries
 		idxA = []; idxB = [];
 		for j = 2:numBounds
 			for i = 1:numColumnsShape
-				if options.doNotPredict(j,i) == 0 && sum(~options.doNotPredict(1:j-1,i)) > 0
+				if options.doNotPredictShape(j,i) == 0 && sum(~options.doNotPredictShape(1:j-1,i)) > 0
 					idxB = [idxB (j-1)*numColumnsShape + i];
-					idxA = [idxA (find(options.doNotPredict(1:j-1,i)==0,1,'last')-1)*numColumnsShape + i];
+					idxA = [idxA (find(options.doNotPredictShape(1:j-1,i)==0,1,'last')-1)*numColumnsShape + i];
 				end
 			end
 		end

@@ -82,6 +82,9 @@ loadModel = uicontrol('Parent',tab1,'Style','pushbutton','String','Load Model','
 segmentBScan = uicontrol('Parent',tab1,'Style','pushbutton','String','Segment','Position',[60,BBottom+140,80,25],'Enable','off','Tag','segmentBScan','Callback',{@segmentBScan_Callback});
 % set the alpha value
 setAlpha = uicontrol('Parent',tab1,'Style','edit','String','0.1','Position',[150,BBottom+140,50,25],'Enable','off','Tag','setAlpha');
+% set factor for the variance
+setVariance = uicontrol('Parent',tab1,'Style','edit','String','1','Position',[210,BBottom+140,50,25],'Enable','off','Tag','setVariance');
+
 % plot
 printFigure = uicontrol('Parent',tab1,'Style','pushbutton','String','printFig','Position',[60,BBottom+180,100,25],'Enable','on','Callback',{@printFigure_Callback});
 
@@ -286,6 +289,7 @@ function switchBScan_Callback(hObject,eventdata)
 	end
 
 	setButtonProps(handlesVec,{'Enable','off'});
+	set(noPred,'Enable','on'); set(showGT,'Enable','on');
 	if isfield(predictions{currentBScan},'prediction')
 		setButtonProps(handlesVec,{'Enable','on'});
 		if length(model) > 0
@@ -387,7 +391,7 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 	end
 
 	collector.options.loadRoutineData = ['spectralis' upper(fileExt(2)) fileExt(3:4)];
-	testFunc.name = @predVariational; testFunc.options = struct('calcFuncVal',1,'alpha',str2num(get(setAlpha,'String')));
+	testFunc.name = @predVariational; testFunc.options = struct('calcFuncVal',1,'alpha',str2num(get(setAlpha,'String')),'variance',str2num(get(setVariance,'String')));
 	if sum(mask{currentBScan}(:)) > 0
 		testFunc.options.doNotPredict = mask{currentBScan};
 	end
@@ -425,7 +429,7 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 		drawnow
 
 		pred{i} = testFunc.name(files,collectorTest,struct(),model,testFunc.options);
-		updateStatus(sprintf('Fnished segmenting BScan %d.',toSegment(i))); drawnow
+		updateStatus(sprintf('Finished segmenting BScan %d: Likelihood: %.3f.',toSegment(i),-sum(pred{i}.funcVal.q_c_data(:)))); drawnow
 	end
 	set(f,'Pointer','arrow');
 end
@@ -530,7 +534,7 @@ function loadModel_Callback(hObject,eventdata)
 		tBScan.Position(3) = tBScan.Extent(3); tBScan.Position(4) = tBScan.Extent(4);           
 		if length(fieldnames(model)) > 0
 			updateStatus('Model loaded.');
-			setButtonProps({'segmentBScan','setAlpha','resetMode'},{'Enable','on'});
+			setButtonProps({'segmentBScan','setAlpha','setVariance','resetMode'},{'Enable','on'});
 
 			% show first mode in the respective tab
 			numModes = size(model.shapeModel(1).WML,2); z = zeros(numModes,1);
