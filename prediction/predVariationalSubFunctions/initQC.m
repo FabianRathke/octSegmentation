@@ -1,7 +1,7 @@
 
 if ~isfield(options,'appearance')
 	% use prediction on a subset of columns to restrict the area that has to be taken into consideration
-	if length(collector.options.columnsPred) > 50 && isfield(collector.options,'margins')
+	if length(collector.options.columnsPred) > 100 && isfield(collector.options,'margins')
 		volRegion = 1;
 		if numVolRegions > 1
 			error('Not implemented yet for 3D models');
@@ -114,80 +114,42 @@ clear predictionA;
 
 initqc = tic;
 
-if isfield(options,'segmentation')
-	if numVolRegions > 1
-		error('Not implemented for 3D models');
-	end
-	% all columns with at least one boundary to segment
-	columnsToSegment = find(sum(options.idxRecalc)>0);
-
-	%if ~isfield(models.shapeModel,'pTransV')
-	%	models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20);
-	%	end
-	for j = 1:length(columnsToSegment)
-		i = columnsToSegment(j);
-		% calculate transition matrices
-	    for k = 2:numBounds
-			idx_a = columnsPredShape{1}(1,i) + (k-2)*numColumnsShape; idx_b = idx_a + numColumnsShape;
-
-			P = inv(WML([idx_a idx_b],:)*WML([idx_a idx_b],:)' + eye(2)*(sigmaML+40));
-			[iS jS sS numElements] = getCondTransMatrixC([models.shapeModel.mu(idx_a) models.shapeModel.mu(idx_b)]',P,int32(collector.options.Y),10^-20);
-			pTransV{k} = sparse(iS(1:numElements),jS(1:numElements),sS(1:numElements),collector.options.Y,collector.options.Y);
-		end
-
-		% clamp observation probabilities to previous segmentation
-		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i;
-		pObs = squeeze(prediction(:,:,i,volRegion));
-		fixBounds = find(~options.idxRecalc(:,columnsToSegment(j)));
-		for k = 1:length(fixBounds)
-			pObs(:,fixBounds(k)) = zeros(numRows,1);
-			segm = options.segmentation(fixBounds(k),columnsToSegment(j));
-			pObs([floor(segm) ceil(segm)],fixBounds(k)) = [ceil(segm)-segm segm-floor(segm)];
-		end
-		
-		variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
-		% calculate prior probabilities for first boundary
-		pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
-		q_c.singleton(:,:,i,volRegion) = sumProductSparse(pStart,pTransV,pObs);
-	end
-else
+if isfield(options,'doNotPredict')
 	% old Matlab code
-	if isfield(options,'doNotPredict')
-		models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20,~options.doNotPredict);
-		for volRegion = 1:numVolRegions
-			% initialization only has to be made for columns relvant for updating the q(b) distribution
-			for i = 1:numColumnsShape(volRegion)
-				idxPredict = find(~options.doNotPredict(:,i));
-				if length(idxPredict) > 0
-					%idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i;
-					pObs = squeeze(prediction(:,idxPredict,columnsShapePred{volRegion}(i),volRegion));
-		
-					idxA = i + (idxPredict(1)-1)*numColumnsShape;
-					variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
-					% calculate probabilities for first boundary
-					pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
-					q_c.singleton(:,idxPredict,columnsShapePred{volRegion}(i),volRegion) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs);
-				end
+	models.shapeModel = preCalcTransitionMatrices(collector,models.shapeModel,10^-20,~options.doNotPredict);
+	for volRegion = 1:numVolRegions
+		% initialization only has to be made for columns relvant for updating the q(b) distribution
+		for i = 1:numColumnsShape(volRegion)
+			idxPredict = find(~options.doNotPredict(:,i));
+			if length(idxPredict) > 0
+				%idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i;
+				pObs = squeeze(prediction(:,idxPredict,columnsShapePred{volRegion}(i),volRegion));
+	
+				idxA = i + (idxPredict(1)-1)*numColumnsShape;
+				variance = sum(models.shapeModel.WML(idxA,:).^2) + models.shapeModel.sigmaML;
+				% calculate probabilities for first boundary
+				pStart = 1/sqrt(2*pi*variance)*exp(-0.5*(1/variance)*((1:numRows) - models.shapeModel.mu(idxA)).^2);
+				q_c.singleton(:,idxPredict,columnsShapePred{volRegion}(i),volRegion) = sumProductSparse(pStart,models.shapeModel.pTransV{volRegion}(i,:),pObs);
 			end
 		end
-	else
-		% C version; segments all columns for one BScan; needs as input the indices of the first boundary inside the shape model
-		for volRegion = 1:numVolRegions
-			% the -1 is C-indexing
-			idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + (1:numColumnsShape(volRegion)) - 1;
-			q_c.singleton(:,:,columnsShapePred{volRegion},volRegion) = reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred')-1),[numRows,numBounds,numColumnsShape(volRegion)]);
-			% column-wise C-code (used only for testing)
-			%	offset = numColumnsShape(volRegion)*[0:numBounds-2];
-			% initialization only has to be made for columns relvant for updating the q(b) distribution
-			%	for i = 1:numColumnsShape(volRegion)
-			%		% the -1 is C-indexing
-			%		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i - 1;
-			%		idxA = [idxA+offset; idxA+offset+numColumnsShape(volRegion)];
-			%		pObs = squeeze(prediction(:,:,columnsShapePred{volRegion}(i),volRegion));
-			%		
-			%		q_c.singleton2(volRegion,columnsShapePred{volRegion}(i),:,:) = reshape(sumProductSparseBackup(pObs,models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable),[numRows numBounds])';
-			%	end
-		end
+	end
+else
+	% C version; segments all columns for one BScan; needs as input the indices of the first boundary inside the shape model
+	for volRegion = 1:numVolRegions
+		% the -1 is C-indexing
+		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + (1:numColumnsShape(volRegion)) - 1;
+		q_c.singleton(:,:,columnsShapePred{volRegion},volRegion) = reshape(sumProductSparseC(prediction(:,:,columnsShapePred{volRegion},volRegion),models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable,int32(boundsPred')-1),[numRows,numBounds,numColumnsShape(volRegion)]);
+		% column-wise C-code (used only for testing)
+		%	offset = numColumnsShape(volRegion)*[0:numBounds-2];
+		% initialization only has to be made for columns relvant for updating the q(b) distribution
+		%	for i = 1:numColumnsShape(volRegion)
+		%		% the -1 is C-indexing
+		%		idxA = sum(numColumnsShape(1:volRegion-1))*numBounds + i - 1;
+		%		idxA = [idxA+offset; idxA+offset+numColumnsShape(volRegion)];
+		%		pObs = squeeze(prediction(:,:,columnsShapePred{volRegion}(i),volRegion));
+		%		
+		%		q_c.singleton2(volRegion,columnsShapePred{volRegion}(i),:,:) = reshape(sumProductSparseBackup(pObs,models.shapeModel(volRegion).mu,models.shapeModel(volRegion).WML,models.shapeModel(volRegion).sigmaML,int32(idxA),hashTable),[numRows numBounds])';
+		%	end
 	end
 end
 q_c.singleton(q_c.singleton < options.threshold_q_c) = 0;

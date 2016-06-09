@@ -100,10 +100,9 @@ end
 
 if options.plotting
    for volRegion = 1:numVolRegions
-		idx = (1:numBounds*numColumnsShape(volRegion)) + sum(numColumnsShape(1:volRegion-1))*numBounds;
 		toPlot = squeeze(sum(q_c.singleton(:,:,:,volRegion).*repmat((1:numRows)',[1,numBounds,numColumnsPred])));
 		fileSaveName = sprintf('%s/qc_%d/%s_%d.eps',folderName,iter,filename,collector.options.labelIDs(volRegion));
-		eval(sprintf('plotBScan(B%d,toPlot,collector.options.columnsPred,fileSaveName,idxPredictFull)',collector.options.labelIDs(volRegion)));
+		eval(sprintf('plotBScan(B%d,toPlot(:,columnsShapePred{volRegion}),collector.options.columnsShape{volRegion},fileSaveName,idxPredictFull)',collector.options.labelIDs(volRegion)));
 	end
 end
 

@@ -102,7 +102,7 @@ prevBScan = uicontrol('Parent',tab1,'Style','pushbutton','String','<','Position'
 selectBScan = uicontrol('Parent',tab1,'Style','popupmenu','String','','Position',[BScanLeft+BScanWidth/2-10,BScanBottom-75,50,25],'Tag','selectBScan','Callback',{@switchBScan_Callback},'Visible','off');
 
 % text field that shows status reports
-statusText = uicontrol('Parent',tab1,'Style','text','String','Waiting for action...','Position',[40,10,500,25],'Tag','statusText','HorizontalAlignment','Left');
+statusText = uicontrol('Parent',tab1,'Style','text','String','Waiting for action...','Position',[40,10,600,25],'Tag','statusText','HorizontalAlignment','Left');
 
 % buttons to show various segmentation results for the current BScan
 buttons = {{'showDataQuality','DataTerm',75},{'showDataInit','DataTermInit',100},{'showEntropy','EntropyTerm',100},{'showPred','Pred',75},{'showPredInit','PredInit',100},{'showQB','QB',50},{'noPred','BScan',85},{'showGT','GT',50},{'showAppearance','AppTerms',85}};
@@ -125,6 +125,8 @@ addToMask = uicontrol('Parent',tab1,'Style','pushbutton','String','+','Position'
 removeFromMask = uicontrol('Parent',tab1,'Style','pushbutton','String','-','Position',[leftPos+130,BScanBottom+BScanHeight+50,40,25],'Enable','off','Callback',{@removeFromMask_Callback}); handlesVec{end+1} = 'removeFromMask';
 resetMask = uicontrol('Parent',tab1,'Style','pushbutton','String','ResetMask','Position',[leftPos+185,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@resetMask_Callback}); handlesVec{end+1} = 'resetMask';
 autoMask = uicontrol('Parent',tab1,'Style','pushbutton','String','AutoMask','Position',[leftPos+275,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@autoMask_Callback}); handlesVec{end+1} = 'autoMask';
+addModeControl = uicontrol('Parent',tab1,'Style','pushbutton','String','AddMode','Position',[leftPos+365,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@addMode_Callback}); handlesVec{end+1} = 'addModeControl';
+rmMode = uicontrol('Parent',tab1,'Style','pushbutton','String','DelMode','Position',[leftPos+455,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@rmMode_Callback}); handlesVec{end+1} = 'rmMode';
 
 % ####################################################
 
@@ -288,6 +290,10 @@ function switchBScan_Callback(hObject,eventdata)
 		set(findobj('Tag','prevBScan'),'Enable','off');
 	end
 
+	if length(model) > 0
+		numModes = size(model.shapeModel(shapeModel(currentBScan)).WML,2);
+	end
+
 	setButtonProps(handlesVec,{'Enable','off'});
 	set(noPred,'Enable','on'); set(showGT,'Enable','on');
 	if isfield(predictions{currentBScan},'prediction')
@@ -429,7 +435,7 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 		drawnow
 
 		pred{i} = testFunc.name(files,collectorTest,struct(),model,testFunc.options);
-		updateStatus(sprintf('Finished segmenting BScan %d: Likelihood: %.3f.',toSegment(i),-sum(pred{i}.funcVal.q_c_data(:)))); drawnow
+		updateStatus(sprintf('Finished segmenting BScan %d: Likelihood: %.3f, Likelihood/Point: %.3f.',toSegment(i),-sum(pred{i}.funcVal.q_c_data(:)),-mean(pred{i}.funcVal.q_c_data(pred{i}.funcVal.q_c_data~=0)))); drawnow
 	end
 	set(f,'Pointer','arrow');
 end
@@ -597,6 +603,38 @@ end
 
 % ################# SHAPE PRIOR VIEWER CALLBACKS  #############
 
+function addMode_Callback(hObject,eventdata)
+	columnsMode = mask{currentBScan}(1,:)==0;
+    numColumnsMode = sum(columnsMode);
+	modeShape = cos(linspace(-pi/2,pi/2,numColumnsMode))*(numColumnsMode/2);
+	addMode(modeShape);
+	
+	stringVals = cellstr(num2str((1:ceil(numModes/modesPerView))'));
+    set(selectMode,'String',stringVals,'Value',1,'Visible','on');
+	updateStatus(sprintf('Added new mode, now %d modes in total\n',numModes));
+end
+
+function addMode(modeShape)
+  	newMode = zeros(size(model.shapeModel(shapeModel(currentBScan)).WML(:,1)));
+    columnsMode = mask{currentBScan}(1,:)==0;
+    numColumnsMode = sum(columnsMode);
+    % add drusen shape to boundaries 6 to 9
+    columnsToAdd = repmat(find(columnsMode),4,1) + repmat((5:8)'*length(newMode)/numBounds,1,numColumnsMode);
+    newMode(columnsToAdd) = repmat(modeShape,4,1);
+
+    model.shapeModel(shapeModel(currentBScan)).WML(:,end+1) = newMode;
+	numModes = size(model.shapeModel(shapeModel(currentBScan)).WML,2);
+end
+
+function rmMode_Callback(hObject,eventdata)
+	model.shapeModel(shapeModel(currentBScan)).WML(:,end) = [];
+
+	numModes = size(model.shapeModel(shapeModel(currentBScan)).WML,2);
+	stringVals = cellstr(num2str((1:ceil(numModes/modesPerView))'));
+    set(selectMode,'String',stringVals,'Value',1,'Visible','on');
+	updateStatus(sprintf('Removed mode, now %d modes in total\n',numModes));
+end
+
 function switchMode_Callback(hObject,eventdata)
 	Caller = get(hObject,'Tag');
  	if strcmp(Caller,'nextMode')
@@ -612,11 +650,16 @@ end
 
 function switchMode(currentMode)
 	startMode = (currentMode-1)*modesPerView;
-	for i = 1:modesPerView
-		axes(axisMode(i)); reset(axisMode(i)); set(selectModeComp(i),'String',0)
-		if i+startMode <= numModes
-			plot(reshape(model.shapeModel(shapeModel(currentBScan)).WML(:,i+startMode),length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[]));
-			set(selectModeComp(i),'String',sprintf('%.2f',z(i+startMode)));
+	for j = 1:modesPerView
+		axes(axisMode(j)); reset(axisMode(j)); set(selectModeComp(j),'String',0)
+		if j+startMode <= numModes
+			if isstruct(collector)
+				plotWithMask(columnsToPlot,reshape(model.shapeModel(shapeModel(currentBScan)).WML(:,j+startMode),length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[])',mask{currentBScan});
+				set(gca,'XLim',[min(columnsToPlot) max(columnsToPlot)]);
+			else
+				plot(reshape(model.shapeModel(shapeModel(currentBScan)).WML(:,j+startMode),length(model.shapeModel(shapeModel(currentBScan)).columnsShape),[]));
+			end
+			set(selectModeComp(j),'String',sprintf('%.2f',z(j+startMode)));
 		end
 	end
 	set(nextMode,'Enable','on'); set(prevMode,'Enable','on');
@@ -645,7 +688,9 @@ end
 function updateComposition_Callback(hObject,eventdata)
 	startMode = (currentMode-1)*modesPerView;
 	for i = 1:modesPerView
-		z(i+startMode) = str2num(get(selectModeComp(i),'String'));
+		if (i+startMode) <= numModes 
+			z(i+startMode) = str2num(get(selectModeComp(i),'String'));
+		end
 	end	
 	% calculate the composition based on the current z
 	if length(mask{currentBScan}) == 0
@@ -689,7 +734,9 @@ function projModeFunc(prediction)
 		% update z-vec length field
 		set(normZText,'String',sprintf('||z|| = %.2f',norm(z)));
 		for i = 1:modesPerView
-			set(selectModeComp(i),'String',sprintf('%.2f',z(i + (currentMode-1)*modesPerView)));
+			if (i + (currentMode-1)*modesPerView <= numModes)
+				set(selectModeComp(i),'String',sprintf('%.2f',z(i + (currentMode-1)*modesPerView)));
+			end
 		end
 		comp = zeros(prod(size(predictions{currentBScan}.prediction)),1);
 		comp(idx_b) = model.shapeModel(shapeModel(currentBScan)).mu(idx_b) + model.shapeModel(shapeModel(currentBScan)).WML(idx_b,:)*z;
@@ -736,7 +783,7 @@ function plotWithMask(columns,toPlot,mask)
 		starts = find(([~mask(i,1:end-1) 0] -[0 ~mask(i,1:end-1)])==1);
 		stops = find(([~mask(i,1:end-1) 0] -[0 ~mask(i,1:end-1)])==-1);
 		for j = 1:length(starts)
-			plot(columns(starts(j):stops(j)-1),toPlot(i,starts(j):stops(j)-1),'Color',cmap(i,:));
+			plot(columns(starts(j):stops(j)-1),toPlot(i,starts(j):stops(j)-1),'Color',cmap(i,:)); hold on;
 		end
 	end
 end
