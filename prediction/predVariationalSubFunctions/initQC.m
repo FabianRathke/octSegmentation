@@ -1,5 +1,30 @@
+global predictionGlobal;
+isStoredInGlobal = 0;
+% check filename and scanID (for 3D scans) of saved appearance terms
+if ~isempty(predictionGlobal)
+	if ~strcmp(predictionGlobal.filename,hash(files(file).name,'MD5'))
+		% delete outdated global variable
+		clearvars -global predictionGlobal
+		% reinitialize
+		global predictionGlobal;
+	else
+		if ~isempty(predictionGlobal.data{collector.options.labelIDs(file,volRegion)})
+			isStoredInGlobal = 1;
+		end
+	end
+end
+boundsPred = [ones(numColumnsShape,1) ones(numColumnsShape,1)*numRows];
 
-if ~isfield(options,'appearance')
+if isStoredInGlobal
+	fprintf('Reusing appearance terms stored in global variable, which is created if the option flag ''makePredGlobal'' in the collector struct is set to true)\n');
+	% check if all columns that are to be predicted are contained in the globally saved prediction
+	if sum(~ismember(collector.options.columnsPred,predictionGlobal.columns{collector.options.labelIDs(file,volRegion)})) == 0
+		predictionA.prediction = predictionGlobal.data{collector.options.labelIDs(file,volRegion)};
+	else
+		fprintf('Reusing of appearance terms failed! (Information is not stored for all image columns)\n');
+		isStoredInGlobal = 0;
+	end
+elseif ~isfield(options,'appearance') && ~isStoredInGlobal
 	% use prediction on a subset of columns to restrict the area that has to be taken into consideration
 	if length(collector.options.columnsPred) > 100 && isfield(collector.options,'margins')
 		volRegion = 1;
@@ -56,7 +81,7 @@ if ~isfield(options,'appearance')
 		boundsPred = round(reshape(boundsFull,numColumnsShape,2) + [-25*ones(numColumnsShape,1) 25*ones(numColumnsShape,1)]);
 		collector.options.columnsPred = columnsPred;
 
-		% create idxSet that contains positions of patches
+		% create idxSet that contains positions of patches for the reduced image region
 		idxSet = zeros(2,sum(boundsPred(:,2)-boundsPred(:,1)+1));
 		tmp = [arrayfun(@(x,y,z) ones(1,y-x+1)*z,boundsPred(:,1),boundsPred(:,2),collector.options.columnsPred','UniformOutput',false)];
 		idxSet(2,:) = [tmp{:}];
@@ -74,10 +99,10 @@ if ~isfield(options,'appearance')
 		IND = sub2ind([collector.options.Y numColumnsPred],idxSet(1,:),idxSet(2,:));
 		predictionA.prediction{1}(:,IND) = prediction.prediction{1};
 	else
-		boundsPred = [ones(numColumnsShape,1)  ones(numColumnsShape,1)*numRows];
+		% predict all rows in each column
 		predictionA = predAppearance(files(file),collector,models.appearanceModel,options);
 	end
-else
+elseif isfield(options,'appearance')
 	predictionA.prediction = options.appearance;
 end
 
@@ -103,7 +128,15 @@ prediction = prediction(:,length(collector.options.LayersPred) + (1:length(colle
 % reduce the precision
 prediction(prediction < options.thresholdAccuracy) = 0;
 
-% outputs pixelwise appearance terms too
+% saves the appearance terms in a global variable --> can be reused in subsequent runs and requires less user interaction 
+if collector.options.makePredGlobal && ~isStoredInGlobal
+	predictionGlobal.data{collector.options.labelIDs(file,volRegion)} = predictionA.prediction;
+	predictionGlobal.columns{collector.options.labelIDs(file,volRegion)} = collector.options.columnsPred;
+	% save the filename in order to prevent using global data for the wrong file
+	predictionGlobal.filename = hash(files(file).name,'MD5');
+end
+
+% returns pixelwise appearance terms to the user as part of the output struct
 if collector.options.saveAppearanceTerms
 	output.appearanceTerms.prediction{file} = single(predictionA.prediction{1});
 	if collector.options.loadLabels
@@ -134,6 +167,9 @@ if isfield(options,'doNotPredict')
 		end
 	end
 else
+	if numVolRegions > 1
+		warning('Variable boundsPred has to be updated to multiple regions');
+	end
 	% C version; segments all columns for one BScan; needs as input the indices of the first boundary inside the shape model
 	for volRegion = 1:numVolRegions
 		% the -1 is C-indexing
@@ -157,6 +193,3 @@ q_c.singleton(q_c.singleton < options.threshold_q_c) = 0;
 if collector.options.printTimings
 	fprintf('[Initialized q_c]: %.3fs\n',toc(initqc));
 end
-
-
-

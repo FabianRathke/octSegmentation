@@ -181,3 +181,6 @@ if options.numRegionsPerVolume > 1
 	if ~isfield(options,'BscansSelect') options.BscansSelect = 0; end
 end
 
+% assign the appearance terms to a global variable --> can be reused in subsequent runs
+if ~isfield(options,'makePredGlobal') options.makePredGlobal = 0; end
+

@@ -160,6 +160,7 @@ for file = 1:length(files)
 			output.columnsPred = collector.options.columnsPred;
 			output.q_c_singleton = q_c.singleton;
 			output.q_b{file} = reshape(q_b.mu,numColumnsShape(volRegion),[])';
+			output.z{file} = z;
 			if collector.options.loadLabels
 				output.unsigned_error{file} = unsigned_error; unsigned_error = [];	
 			end
