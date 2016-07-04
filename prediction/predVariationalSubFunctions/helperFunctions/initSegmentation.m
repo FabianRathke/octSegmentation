@@ -47,16 +47,9 @@ numBounds = length(collector.options.EdgesPred);
 % experimental way of adding simple shape structure to model drusen pathologies
 if isfield(options,'addDrusenMode')
 	if options.addDrusenMode
-		newMode = zeros(size(models.shapeModel.WML(:,1)));
-	    minMaxColumns = [min(collector.options.columnsPred) max(collector.options.columnsPred)];
-		columnsMode = find(models.shapeModel.columnsShape>=minMaxColumns(1) & models.shapeModel.columnsShape<=minMaxColumns(2));
-		numColumnsMode = length(columnsMode);
-		% add drusen shape to boundaries 6 to 9
-		columnsToAdd = repmat(columnsMode,4,1) + repmat((5:8)'*length(newMode)/numBounds,1,numColumnsMode);
-		modeShape = cos(linspace(-pi/2,pi/2,numColumnsMode))*(numColumnsMode/2);
-		newMode(columnsToAdd) = repmat(modeShape,4,1);
-
-		models.shapeModel.WML(:,end+1) = newMode;
+		for i=1:length(options.modesToAdd)
+			models.shapeModel.WML(:,end+1) = options.modesToAdd{i};
+		end
 	end
 end
 

@@ -386,7 +386,7 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 		return
 	end
 
-	collector.options = struct('numBScansPerVolume',double(fileHeader.NumBScans),'folder_labels','','loadLabels',0,'clipRange',double([1 int32(model.params.X)]+sizeDiff/2),'folder_data',pathNameScan,'numRegionsPerVolume',1,'saveAppearanceTerms',1,'printTimings',1,'clipFactor',1);
+	collector.options = struct('numBScansPerVolume',double(fileHeader.NumBScans),'folder_labels','','loadLabels',0,'clipRange',double([1 int32(model.params.X)]+sizeDiff/2),'folder_data',pathNameScan,'numRegionsPerVolume',1,'saveAppearanceTerms',1,'printTimings',1,'clipFactor',1,'makePredGlobal',0);
 	if isfield(fileHeader,'distanceBScans')
 		collector.options.distBScans = fileHeader.distanceBScans;
 	end
