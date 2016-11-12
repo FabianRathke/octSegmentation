@@ -39,7 +39,7 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 
 	% train seperate models for each Region
 	for regionBScan = 1:collector.options.numRegionsPerBScan
-		% pre-processing of the patches [calls a arbitrary set of models defined in collector.options.preprocessing.patchLevel]
+		% pre-processing of patches [calls all models defined in collector.options.preprocessing.patchLevel]
 		for i = 1:length(collector.options.preprocessing.patchLevel)
 			[trainData(regionBScan).data appearanceModel] = collector.options.preprocessing.patchLevel{i}{1}(trainData(regionBScan),collector.options.preprocessing.patchLevel{i});
 			models = appendToModel(models,appearanceModel,regionVolume,regionBScan);

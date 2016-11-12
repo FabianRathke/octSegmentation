@@ -47,7 +47,7 @@ elseif strcmp(options.loadRoutineData,'spectralisVol')
 	optionsVolImport = struct('BScansSelect',options.labelID, 'verbose',0);
 	[BScanData fileHeader] = HDEVolImporter(options.folder_data,[name ext],optionsVolImport);
 	if (~iscell(BScanData))
-		error(sprintf('Loading %s failed',filename));
+		error(sprintf('Loading %s%s failed',options.folder_data,filename));
 	end
 	B0 = BScanData{1};
 	B0(B0>10) = 0;

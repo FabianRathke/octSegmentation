@@ -21,28 +21,30 @@ numColumnsModes = length(columnsModes);
 numBounds = length(collector.options.EdgesPred);
 
 modeCounter = 1;
+boundariesAffected = 1:5; N = length(boundariesAffected);
 
-for numModes = 1:2
-%numModes = 2;
+%for numModes = 1:2
+% if numModes > 1, copy the shape numModes times
+for numModes = 1
 	% coordinates
 	interval = floor((numColumnsModes-1)/numModes);
 	height = (diff(minMaxColumns)+1)/numModes/2;
-	modeShape = cos(linspace(-pi/2,pi/2,interval+1))*height;
-	modeShapeShift = [modeShape(ceil(end/2):end) modeShape(2:ceil(end/2))];
-
+%	modeShape = cos(linspace(-pi/2,pi/2,interval+1))*height;
+	modeShape = [linspace(1,1.5,interval+1)*height; linspace(1.5,1.5,interval+1)*height; linspace(1.5,1,interval+1)*height];
+	
 	for i = 1:numModes
-		newMode = zeros(1,sizeWML);
-		columnsMode = columnsModes((1:(interval+1)) + (i-1)*interval);
-		% add drusen shape to boundaries 6 to 9
-		columnsToAdd = repmat(columnsMode,4,1) + repmat((5:8)'*sizeWML/numBounds,1,interval+1);
+		for j = 1:size(modeShape,1)
+			newMode = zeros(1,sizeWML); % initial zero mode
+			columnsMode = columnsModes((1:(interval+1)) + (i-1)*interval); % determine column indices that correspond to mode 
 
-		newMode(columnsToAdd) = repmat(modeShape,4,1);
-		% add to cell array of modes
-		newModes{modeCounter} = newMode; modeCounter = modeCounter+1;
-		
-		newMode(columnsToAdd) = repmat(modeShapeShift,4,1);
-		% add to cell array of modes
-		newModes{modeCounter} = newMode; modeCounter = modeCounter+1;
+			% add basic shape to all boundaries, determined by boundariesAffected
+			columnsToAdd = repmat(columnsMode,N,1) + repmat((boundariesAffected-1)'*sizeWML/numBounds,1,interval+1);
+
+			newMode(columnsToAdd) = repmat(modeShape(j,:),N,1);
+			% add to cell array of modes
+			newModes{modeCounter} = newMode; 
+			modeCounter = modeCounter+1;
+		end
 	end
 end
 

@@ -7,6 +7,7 @@ HEADERSIZE = 2048;
 if options.verbose > 0
 	fprintf('Start reading...\n');
 	fprintf('Filename: %s\n',filename);
+	fprintf('Folder: %s\n',folder);
 end
 
 [pathstr,name,ext] = fileparts(filename);

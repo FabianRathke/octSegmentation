@@ -10,13 +10,12 @@ idx_diag = 1:numBounds+1:numBounds^2;
 idxI = zeros(1,numColumnsShapeTotal*numBounds^2);
 idxJ = zeros(1,numColumnsShapeTotal*numBounds^2);
 s = zeros(1,numColumnsShapeTotal*numBounds^2);
-%idx_all = 1:numColumnsShapeTotal*numBounds;
+idx_all = 1:numColumnsShapeTotal*numBounds;
 
 % naive implementation for each image column
 for volRegion = 1:numVolRegions
 	for j = 1:numColumnsShape(volRegion)
 		idx_j = (j:numColumnsShape(volRegion):numColumnsShape(volRegion)*numBounds) + sum(numColumnsShape(1:volRegion-1))*numBounds;
-%		idx_not_j = idx_all; idx_not_j(idx_j) = [];
 		
 		% use the CPU version of WML and M explicitly
 		tmp = eye(numBounds)*sigmaML^-1 - sigmaML^-1*WML(idx_j,:)*M*WML(idx_j,:)';
@@ -31,9 +30,11 @@ for volRegion = 1:numVolRegions
 
 		% calculating A_k^j: note that we do not need the sigma^-2I part, since we pull a part of K that does not include the diagonal
 		if collector.options.calcOnGPU
-%^			A_k(idx_j,idx_not_j) = GPUsingle(K_jj_inverse{volRegion,j})*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
+%			A_k(idx_j,idx_not_j) = GPUsingle(K_jj_inverse{volRegion,j})*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
 		else
 			s2(idxRange) = reshape(K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_j),1,[]);
+			% DEBUG: CALC A_K
+%			idx_not_j = idx_all; idx_not_j(idx_j) = [];
 %			A_k(idx_j,idx_not_j) = K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_not_j);
 		end
 	end
@@ -46,6 +47,7 @@ A_k_nonzero = sparse(idxI,idxJ,s2);
 
 A_k_partial = -sigmaML^-1*K_jj_inverse_block*WML*M;
 
+% DEBUG CALC \tilde{P}
 %factor = (1./sigma_tilde_squared');
 %P_mu = (A_k.*factor(:,ones(1,numBounds*numColumnsShapeTotal)))'*A_k;
 

@@ -61,8 +61,8 @@ end
 q_b.mu = zeros(numColumnsShape*numBounds,1);
 q_b.mu(idx_b) = x + models.shapeModel.mu(idx_b);
 
-% Mahalonbis distance
 vec = q_b.mu(idx_b)-models.shapeModel.mu(idx_b);
+% Mahalonbis distance
 %distance = sqrt(sigmaML^-1*vec'*vec - sigmaML^-1*(vec'*WML)*M*(WML'*vec));
 z = M*(WML(idx_b,:)'*vec);
 fprintf('Distance of E[q_b] to shape prior: %.2f\n',norm(z));

@@ -17,14 +17,15 @@ if ~isempty(predictionGlobal)
 end
 boundsPred = [ones(numColumnsShape,1) ones(numColumnsShape,1)*numRows];
 
+% Calculate appearance terms
 if isStoredInGlobal
-	fprintf('Reusing appearance terms stored in global variable\n');
 	% check if all columns that are to be predicted are contained in the globally saved prediction
 	if sum(~ismember(collector.options.columnsPred,predictionGlobal.columns{collector.options.labelIDs(file,volRegion)})) == 0
+		fprintf('Reusing appearance terms stored in global variable\n');
 		% calculate indices
 		prediction = predictionGlobal.data{collector.options.labelIDs(file,volRegion)}(:,:,ismember(predictionGlobal.columns{collector.options.labelIDs(file,volRegion)},collector.options.columnsPred));
 	else
-		fprintf('Reusing of appearance terms failed! (Information is not stored for all image columns)\n');
+		fprintf('Reusing of appearance terms failed, calculating them anew! (Information is not stored for all image columns).\n');
 		isStoredInGlobal = 0;
 	end
 else
@@ -113,16 +114,6 @@ else
 	prediction = zeros(numRows,numClasses,numColumnsPred,numVolRegions);
 
 	for volRegion = 1:numVolRegions
-		% load ground truth and the scan itself
-		collector.options.labelID = collector.options.labelIDs(file,volRegion);
-		% load labels if set by the user
-		if collector.options.loadLabels
-			output.trueLabels{file,volRegion} = loadLabels(files(file).name,collector.options);
-		end
-
-		if options.plotting
-			eval(sprintf('B%d = loadData(files(file).name,collector.options);',collector.options.labelID));
-		end
 		prediction(:,:,:,volRegion) = permute(reshape(predictionA.prediction{volRegion},[numClasses,collector.options.Y,numColumnsPred]),[2 1 3]);
 	end
 	% we only need the subset of boundary classes
@@ -140,6 +131,19 @@ else
 		end
 	end
 	clear predictionA;
+end
+
+for volRegion = 1:numVolRegions
+	% load ground truth and the scan itself
+	collector.options.labelID = collector.options.labelIDs(file,volRegion);
+	% load labels if set by the user
+	if collector.options.loadLabels
+		output.trueLabels{file,volRegion} = loadLabels(files(file).name,collector.options);
+	end
+
+	if options.plotting
+		eval(sprintf('B%d = loadData(files(file).name,collector.options);',collector.options.labelID));
+	end
 end
 
 % saves the appearance terms in a global variable --> can be reused in subsequent runs and requires less user interaction 

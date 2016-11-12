@@ -44,5 +44,5 @@ end
 
 if ~isempty(filename)
 	print(filename,'-depsc2');
-	close all
+	close gcf
 end

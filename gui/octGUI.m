@@ -125,8 +125,13 @@ addToMask = uicontrol('Parent',tab1,'Style','pushbutton','String','+','Position'
 removeFromMask = uicontrol('Parent',tab1,'Style','pushbutton','String','-','Position',[leftPos+130,BScanBottom+BScanHeight+50,40,25],'Enable','off','Callback',{@removeFromMask_Callback}); handlesVec{end+1} = 'removeFromMask';
 resetMask = uicontrol('Parent',tab1,'Style','pushbutton','String','ResetMask','Position',[leftPos+185,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@resetMask_Callback}); handlesVec{end+1} = 'resetMask';
 autoMask = uicontrol('Parent',tab1,'Style','pushbutton','String','AutoMask','Position',[leftPos+275,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@autoMask_Callback}); handlesVec{end+1} = 'autoMask';
-addModeControl = uicontrol('Parent',tab1,'Style','pushbutton','String','AddMode','Position',[leftPos+365,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@addMode_Callback}); handlesVec{end+1} = 'addModeControl';
-rmMode = uicontrol('Parent',tab1,'Style','pushbutton','String','DelMode','Position',[leftPos+455,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@rmMode_Callback}); handlesVec{end+1} = 'rmMode';
+% set left and right boundary for segmentation
+setLeftBound = uicontrol('Parent',tab1,'Style','edit','String','','Position',[leftPos+365,BScanBottom+BScanHeight+50,50,25],'Enable','off'); handlesVec{end+1} = 'setLeftBound';
+setRightBound = uicontrol('Parent',tab1,'Style','edit','String','','Position',[leftPos+425,BScanBottom+BScanHeight+50,50,25],'Enable','off'); handlesVec{end+1} = 'setRightBound';
+
+addModeControl = uicontrol('Parent',tab1,'Style','pushbutton','String','AddMode','Position',[leftPos+500,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@addMode_Callback}); handlesVec{end+1} = 'addModeControl';
+rmMode = uicontrol('Parent',tab1,'Style','pushbutton','String','DelMode','Position',[leftPos+590,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@rmMode_Callback}); handlesVec{end+1} = 'rmMode';
+updateModes = uicontrol('Parent',tab1,'Style','pushbutton','String','UpdateMode','Position',[leftPos+700,BScanBottom+BScanHeight+50,80,25],'Enable','off','Callback',{@updateMode_Callback}); handlesVec{end+1} = 'updateModes';
 
 % ####################################################
 
@@ -136,6 +141,14 @@ handlesVec{end+1} = 'projMode'; handlesVec{end+1} = 'projQBMode'; handlesVec{end
 % *****************************************************
 % ****************** CALLBACKS ************************
 % *****************************************************
+
+function updateMode_Callback(hObject,eventdata)
+	model.shapeModel(shapeModel(currentBScan)).WML = model.shapeModel(shapeModel(currentBScan)).mu - reshape(predictions{currentBScan}.prediction',1,[])';
+    numModes = size(model.shapeModel(shapeModel(currentBScan)).WML,2);
+    stringVals = cellstr(num2str((1:ceil(numModes/modesPerView))'));
+    set(selectMode,'String',stringVals,'Value',1,'Visible','on');
+
+end
 
 function selectGTDir_Callback(hObject,eventdata)
 	if length(pathNameScan) > 0
@@ -344,13 +357,16 @@ function segmentBScan_Callback(hObject,eventdata)
 		toSegment = currentBScan;
 	end
 	pred = startSegmentation(struct(),struct(),toSegment);
+	if exist('predictionGlobal')
+		clearvars -global predictionGlobal
+	end
    	columnsToPlot = collector.options.columnsPred*collector.options.clipFactor + collector.options.clipRange(1) - 1 - (collector.options.clipFactor-1);
 
 	for i = 1:length(pred)
 		numBounds = size(pred{i}.prediction{1},1); 
 	    predictions{toSegment(i)}.prediction = pred{i}.prediction{1};
         predictions{toSegment(i)}.predictionInit = pred{i}.prediction_init{1};
-        predictions{toSegment(i)}.appearance = pred{i}.appearanceTerms.prediction;
+		predictions{toSegment(i)}.appearance = pred{i}.appearanceTerms.prediction;
 		predictions{toSegment(i)}.q_b = pred{i}.q_b{1};
         predictions{toSegment(i)}.funcVal = pred{i}.funcVal;
 		predictions{toSegment(i)}.funcValInit = pred{i}.funcValInit;
@@ -398,9 +414,6 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 
 	collector.options.loadRoutineData = ['spectralis' upper(fileExt(2)) fileExt(3:4)];
 	testFunc.name = @predVariational; testFunc.options = struct('calcFuncVal',1,'alpha',str2num(get(setAlpha,'String')),'variance',str2num(get(setVariance,'String')));
-	if sum(mask{currentBScan}(:)) > 0
-		testFunc.options.doNotPredict = mask{currentBScan};
-	end
 
 	% scan format, which has double resolution in y-dimension
 	if fileHeader.SizeX == 1536
@@ -425,7 +438,18 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 	for i = 1:length(fieldNames)
 		eval(sprintf('testFunc.options.%s = optionsAdd.%s;',fieldNames{i},fieldNames{i}));
 	end
-		
+
+	if ~isempty(get(setLeftBound,'String')) && ~isempty(get(setRightBound,'String'))
+		% set mask defined by bounds
+		%collector.options.columnsPred = str2num(get(setLeftBound,'String')):2:str2num(get(setRightBound,'String'));
+    	mask{currentBScan} = zeros(numBounds,length(collector.options.columnsPred));
+		mask{currentBScan}(:,collector.options.columnsPred < str2num(get(setLeftBound,'String')) | collector.options.columnsPred > str2num(get(setRightBound,'String'))) = 1;
+	end
+
+	if sum(mask{currentBScan}(:)) > 0
+		testFunc.options.doNotPredict = mask{currentBScan};
+	end
+	
 	for i = 1:length(toSegment)
 		collector.options.labelIDs = toSegment(i);
 		collectorTest.name = @collectTestData; collectorTest.options = collector.options;
@@ -456,7 +480,7 @@ function displayAppearance()
 	app = zeros(size(BScanData{currentBScan}));
 	app(:,columnsToPlot) = reshape(predictions{currentBScan}.appearance{1}(currentAppLayer,:),fileHeader.SizeZ,[]);
 	% normalize the maximum of each column to one
-	app(:,columnsToPlot) = app(:,columnsToPlot)./repmat(max(app(:,columnsToPlot)),fileHeader.SizeZ,1);
+	%app(:,columnsToPlot) = app(:,columnsToPlot)./repmat(max(app(:,columnsToPlot)),fileHeader.SizeZ,1);
 	% interpolate columns
 	columnsToInterpolate = setdiff(columnsToPlot(1):columnsToPlot(end),columnsToPlot);
 
@@ -513,9 +537,11 @@ end
 
 function showPredInit_Callback(hObject,eventdata)
 	displaySegmentation(predictions{currentBScan}.predictionInit,columnsToPlot);
+	updateStatus(sprintf('Finished segmenting BScan %d: Likelihood: %.3f, Likelihood/Point: %.3f.',currentBScan,-sum(predictions{currentBScan}.funcValInit.q_c_data(:)),-mean(predictions{currentBScan}.funcValInit.q_c_data(predictions{currentBScan}.funcValInit.q_c_data~=0)))); drawnow 
 end
 function showPred_Callback(hObject,eventdata)
 	displaySegmentation(predictions{currentBScan}.prediction,columnsToPlot);
+	updateStatus(sprintf('Finished segmenting BScan %d: Likelihood: %.3f, Likelihood/Point: %.3f.',currentBScan,-sum(predictions{currentBScan}.funcVal.q_c_data(:)),-mean(predictions{currentBScan}.funcVal.q_c_data(predictions{currentBScan}.funcVal.q_c_data~=0)))); drawnow 
 end
 
 function noPred_Callback(hObject,eventdata)
@@ -548,10 +574,11 @@ function loadModel_Callback(hObject,eventdata)
 			currentMode = 1; 
 			stringVals = cellstr(num2str((1:ceil(numModes/modesPerView))'));
 			set(selectMode,'String',stringVals,'Value',1,'Visible','on');
-			set(nextMode,'Enable','on');
+			set([nextMode,setLeftBound,setRightBound],'Enable','on'); 
 			set(modelNameText,'String',FileName);
 			switchMode(currentMode);
 			updateComposition_Callback();
+			numBounds = length(model.params.EdgesTrain);
 		else
 			updateStatus('Loading of model failed.');
 		end
