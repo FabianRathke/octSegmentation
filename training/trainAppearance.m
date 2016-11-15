@@ -26,7 +26,13 @@ function models = trainAppearance(files,collector,params,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 05-May-2014
 
-options = setAppearanceDefaults(options,params,files);
+options = setAppearanceDefaults(options,params,files,collector);
+
+% for compatibility reasons, copy options to collector struct
+fn = fieldnames(options);
+for j = 1:length(fn)
+	eval(sprintf('collector.options.%s = options.%s;',fn{j},fn{j}));
+end
 
 tstart = tic;
 models = struct();

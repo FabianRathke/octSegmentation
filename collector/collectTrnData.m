@@ -37,7 +37,6 @@ pw = ([options.height options.width]-1)/2; % number of pixels left and right of 
 numClasses = length(options.LayersTrain) + length(options.EdgesTrain);
 numPatches = options.numPatches*length(files)*numClasses;
 
-
 for region = 1:size(options.BScanRegions,1)
 	trnData(region).data = zeros(numPatches,options.height*options.width);
 	trnData(region).classID = zeros(1,numPatches,'int8');

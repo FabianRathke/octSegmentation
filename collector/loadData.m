@@ -76,8 +76,10 @@ if options.clip
 end
 
 % apply scan-wise preprocessing
-for i = 1:length(options.preprocessing.scanLevel)
-	B0 = options.preprocessing.scanLevel{i}{1}(B0,options.preprocessing.scanLevel{i});
+if isfield(options.preprocessing,'scanLevel')
+    for i = 1:length(options.preprocessing.scanLevel)
+        B0 = options.preprocessing.scanLevel{i}{1}(B0,options.preprocessing.scanLevel{i});
+    end
 end
 
 end

@@ -25,7 +25,13 @@ function models = trainModels(files,collector,params,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Major Revision: 03-Feb-2016
 
-models.appearanceModel = trainAppearance(files,collector,params,options.appearanceModel);
+if length(options.appearanceModel) > 1
+	fprintf('Learn mixture of appearance models\n');
+end
+for j = 1:length(options.appearanceModel)
+	models.appearanceModel{j} = trainAppearance(files,collector,params,options.appearanceModel{j});
+end
 models.shapeModel = trainShape(files,collector,params,options.shapeModel);
 
 models.params = collector.options;
+models.options.appearanceModel = options.appearanceModel;
