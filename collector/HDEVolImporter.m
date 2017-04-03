@@ -183,7 +183,8 @@ if options.verbose > 0
 	fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
 	fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/(fileHeader.NumBScans-1),sizeY/fileHeader.ScaleYSlo/(fileHeader.NumBScans-1));
 end
-fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/(fileHeader.NumBScans-1);
+%fileHeader.distanceBScans = fileHeader.Distance/fileHeader.ScaleYSlo;
+fileHeader.distanceBScans = fileHeader.Distance;
 
 if options.plotSLO
 	figure; imagesc(sqrt(sqrt(SLO))); t = title(['SLO ' filename]); colormap gray;

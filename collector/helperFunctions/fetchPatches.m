@@ -7,6 +7,8 @@ function patches = fetchPatches(filename,idxSet,options)
 %      .centerPatches - [boolean] substract the mean of each patch
 %      .height        - [int] patch height in px (has to odd number)
 %      .width         - [int] patch width in px
+%      .Patches3D     - [boolean] whether to fetch 3D-patches 
+%      .depth         - [int] patch depth in px (for 3D only)
 %
 % Outputs:
 %   patches - [struct]
@@ -19,38 +21,68 @@ function patches = fetchPatches(filename,idxSet,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 05-Dec-2013
+% Last Revision: 28-Mar-2017
 
+checkPredictionGlobal(filename);
+global predictionGlobal;
+global isStoredInGlobal;
 %tic;
 pw = ([options.height options.width]-1)/2;
-patchSize = options.width*options.height;
-B0 = loadData(filename,options);
+patchSize = options.width*options.height*options.depth;
+if options.Patches3D
+	labelIDs = options.labelID + [-(options.depth-1)/2:(options.depth-1)/2];
+	for j = 1:options.depth
+		options.labelID = labelIDs(j);
+		B0{j} = loadData(filename,options);
+	end
+else
+	if isStoredInGlobal & isfield(predictionGlobal,'BScans') & ~isempty(predictionGlobal.BScans{options.labelID})
+		B0{1} = predictionGlobal.BScans{options.labelID};
+	else
+		B0{1} = loadData(filename,options);
+	end
+end
 
-[Y X] = size(B0);
+[Y X Z] = size(B0{1});
 
 % increase the scan to draw patches from the border
-B0Aug = getAugmentedImage(B0,[options.height options.width]);
+for j = 1:length(B0)
+	for i = 1:Z
+		B0Aug{j}(:,:,i) = getAugmentedImage(squeeze(B0{j}(:,:,i)),[options.height options.width]);
+	end
+end
 
 % fetch indices to draw patches at positions idxSet
-A = repmat([1:options.height]',[options.width 1])';
-A = A(ones(1,size(idxSet,2)),:);
-a = idxSet(1,:)'-pw(1)-1;
-A = A + a(:,ones(1,size(A,2)));
+A = int32(repmat([1:options.height]',[options.width 1])'-pw(1)-1);
+%A = A(ones(1,size(idxSet,2)),:);
+%A = A + idxSet(ones(1,size(A,2)),:)';
+A = bsxfun(@plus,A,idxSet(1,:)');
 
-B = reshape(repmat(1:options.width,[options.height 1]),1,[]);
-B = B(ones(1,size(idxSet,2)),:);
-b = idxSet(2,:)'-pw(2)-1;
-B = B + b(:,ones(1,size(B,2)));
+B = int32(reshape(repmat(1:options.width,[options.height 1]),1,[])-pw(2)-2);
+%B = B(ones(1,size(idxSet,2)),:);
+%B = B + idxSet(ones(1,size(B,2))*2,:)';
+B = bsxfun(@plus,B,idxSet(2,:)');
 
-%indices = sub2ind(size(B0Aug),A,B);
-indices = A + (B-1)*size(B0Aug,1);
+% indices = sub2ind(size(B0Aug),A,B);
+%indices = A + (B-1)*size(B0Aug{1},1);
+indices = A + B*size(B0Aug{1},1);
 %fprintf('Overhead when fetching patches in %.3f\n',toc);
-patches.data = B0Aug(indices);
+
+if length(B0Aug) == 1 & Z==1
+	patches.data = B0Aug{j}(indices);
+else
+	patches.data = [];
+	for j=1:length(B0Aug)
+		for i = 1:Z
+			idxTmp = indices + (i-1)*X*Y;
+			patches.data = [patches.data B0Aug{j}(idxTmp)];
+		end
+	end
+end
 
 % center all patches
 if options.centerPatches
-	mean_tmp = mean(patches.data,2);
-	patches.data = patches.data - mean_tmp(:,ones(1,patchSize));
+	patches.data = bsxfun(@minus,patches.data,mean(patches.data,2));
 end
 
 if options.saveAppearanceTerms && options.loadLabels

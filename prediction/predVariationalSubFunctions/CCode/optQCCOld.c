@@ -52,7 +52,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	double* preCalcA = malloc(numRows*sizeof(double));
 	double* preCalcB = malloc(numRows*sizeof(double));
 
-
 	int idxQC,idxShape,idxShapeWithout,idxPred,idx,idxA,idxB,idxC,idxANumRows,idxBNumRows,idxCondA,idxCondB;
 	int idxCounter,idxCounterA,idxCounterB;
 	int* numNonZeroIdx = malloc(numBounds*sizeof(int));
@@ -61,7 +60,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
    	int* idxNonZeroAlpha = malloc(numBounds*numRows*sizeof(int)); 
 	int numNonZeroIdxB;
 
-	
 	/* determines when to use the hash table */
 	int limit = -10;
 
@@ -209,12 +207,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 							valB = factorB*(i2 + 1 - mu_a_b[idxBNumRows + i1])*(i2 + 1 - mu_a_b[idxBNumRows + i1]);
 					
 							if (valA > -300) {
-								tmpA += (valA < -limit) ? preCalcA[i2]*hashTable[(int)(-valA*1000 +0.5)] : preCalcA[i2]*exp(valA);
+								tmpA += (valA < -limit) ? preCalcA[i2]*hashTable[(int)(-valA*1000 + 0.5)] : preCalcA[i2]*exp(valA);
 							}
 							if (valB > -300) {
-								tmpB += (valB < -limit) ? preCalcB[i2]*hashTable[(int)(-valB*1000 +0.5)] : preCalcB[i2]*exp(valB);
+								tmpB += (valB < -limit) ? preCalcB[i2]*hashTable[(int)(-valB*1000 + 0.5)] : preCalcB[i2]*exp(valB);
 							}
-
 						}
 					}
 					beta[idx + i1] = (colAFac[idxPred]*tmpA + colBFac[idxPred]*tmpB)/c[k+1];

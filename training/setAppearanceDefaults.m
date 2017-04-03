@@ -16,6 +16,8 @@ function options = setAppearanceDefaults(options,params,files,collector)
 %       .patchPosition       - [string] draw patches for layer-classes randomly ('random') or from the middle ('middle') for each column. Default: ['middle']
 %       .centerPatches       - [boolean] subtract mean of each patch. Default: [true]
 %       .priorVolumesPaper   - [boolean] assigns a specific non-uniform prior distribution to the appearance models; see documentation.pdf and the source code for details
+%       .Patches3D			 - [boolean] uses voxes instead of 2-D patches
+%		.depth				 - [int] voxel depth in z-direction
 %   params  - [struct] holds params used for example in cross-validation 
 %
 % Outputs:
@@ -58,7 +60,7 @@ if ~isfield(options,'BScanRegions') options.BScanRegions = [1 collector.options.
 options.numRegionsPerBScan = size(options.BScanRegions,1);
 
 % number of patches to draw for training; per class and file
-if ~isfield(options,'numPatches') options.numPatches = 30; end
+if ~isfield(options,'numPatches') options.numPatches = 50; end
 % substract the patch mean from each patch; make appearance terms less vulnerable to variations of intensity between and within OCT scans
 if ~isfield(options,'centerPatches') options.centerPatches = 1; end
 % patches are drawn from the center of their layer
@@ -68,4 +70,14 @@ if ~isfield(options,'priorVolumesPaper')
 	options.priorVolumesPaper = 0;
 end
 
+if ~isfield(options,'Patches3D')
+	options.Patches3D = 0;
+end
 
+if ~isfield(options,'depth') & options.Patches3D
+	options.depth = 5;
+end
+
+if ~options.Patches3D
+	options.depth = 1;
+end

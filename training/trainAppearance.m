@@ -1,4 +1,4 @@
-function models = trainAppearance(files,collector,params,options)
+function [models options] = trainAppearance(files,collector,params,options)
 % trainAppearance - grabs training data using the collector defined in collector.name; calls the appearance model defined in options.appearanceModel
 % 
 % Syntax:
@@ -42,13 +42,23 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 	collector.options.labelIDsCurrent = collector.options.labelIDs(:,regionVolume);
 	% fetch training patches from all files
 	trainData = collector.name(files,collector.options);
+	printMessage(sprintf('Collected %d patches (%d per class) for each bscan-regions (%d in total), from %d files in volume-region %d\n',length(trainData(1).classID),length(trainData(1).classID)/length(unique(trainData(1).classID)),options.numRegionsPerBScan,length(files),regionVolume),1,collector.options.verbose);
 
 	% train seperate models for each Region
 	for regionBScan = 1:collector.options.numRegionsPerBScan
 		% pre-processing of patches [calls all models defined in collector.options.preprocessing.patchLevel]
 		for i = 1:length(collector.options.preprocessing.patchLevel)
-			[trainData(regionBScan).data appearanceModel] = collector.options.preprocessing.patchLevel{i}{1}(trainData(regionBScan),collector.options.preprocessing.patchLevel{i});
-			models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
+			if (size(collector.options.preprocessing.patchLevel{i},1) == 1)
+				[trainData(regionBScan).data appearanceModel] = collector.options.preprocessing.patchLevel{i}{1}(trainData(regionBScan),collector.options.preprocessing.patchLevel{i});
+			elseif (size(collector.options.preprocessing.patchLevel{i},1) == collector.options.numRegionsPerBScan)
+				 [trainData(regionBScan).data appearanceModel] = collector.options.preprocessing.patchLevel{i}{regionBScan}{1}(trainData(regionBScan),collector.options.preprocessing.patchLevel{i}{regionBScan});
+			else
+				 error(sprintf('Wrong number of options for preprocessing: %s\n',collector.options.preprocessing.patchLevel{i}{1}));
+			end
+			
+			if ~isempty(appearanceModel)
+				models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
+			end
 		end
 	
 		% find class ids (i.e. classes representing boundary and layer patches)
@@ -58,8 +68,8 @@ for regionVolume = 1:collector.options.numRegionsPerVolume
 		% call the appearance model set by the user	
 		appearanceModel = options.appearanceModel(trainData(regionBScan),ids,params,options);
 	    models = appendToModel(models,appearanceModel,regionVolume,regionBScan);
-		
-		if options.priorVolumesPaper
+
+		if options.priorVolumesPaper & strcmp(func2str(collector.options.appearanceModel),'trainGlasso')
 			models = setPriors(models,ids,collector,regionVolume,regionBScan);
 		end
 	end
@@ -81,7 +91,7 @@ end
 
 end
 
-% restores specific non-uniform priors for the appearance models as incorrectly used in our publication for the 3-D dataset
+% restores specific non-uniform priors for the appearance models as used in our publication for the 3-D dataset
 function models = setPriors(models,ids,collector,regionVolume,regionBScan)
 for j = 1:length(ids)
 	if j <= collector.options.numLayers

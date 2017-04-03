@@ -136,7 +136,10 @@ if BScansNum > 1 && options.verbose > 0
 		fprintf('Area covered in px (X x Y): %.2f px x %.2f px = %.2f px^2\n',sizeX/fileHeader.ScaleXSlo,sizeY/fileHeader.ScaleYSlo,sizeX*sizeY/(fileHeader.ScaleXSlo*fileHeader.ScaleYSlo));
 		fprintf('Distance between B-Scans: %.4f mm, %.4f px\n',sizeY/double(fileHeader.NumBScans-1),sizeY/fileHeader.ScaleYSlo/double(fileHeader.NumBScans-1));
 	end
-	fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/double(fileHeader.NumBScans-1);
+%	fileHeader.distanceBScans = sizeY/fileHeader.ScaleYSlo/double(fileHeader.NumBScans-1);
+	fileHeader.distanceBScans = sizeY/double(fileHeader.NumBScans-1);
+	fileHeader.sizeY = sizeY;
+	fileHeader.sizeX = sizeX;
 end
 
 if options.plotSLO

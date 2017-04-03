@@ -11,7 +11,8 @@ for i = 1:9
     interPData(2,:,i) = interp1(valX,prediction(i,:),valInter(2,:),'pchip');
 end
 
-ranges = [4 8 12 16 20];
+%ranges = [4 8 12 16 20];
+ranges = [3:3:15];
 numR = length(ranges);
 colors = [ones(numR-1,1) linspace(1,0,numR-1)' zeros(numR-1,1)];
 

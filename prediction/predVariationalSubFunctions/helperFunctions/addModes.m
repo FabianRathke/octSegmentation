@@ -21,29 +21,89 @@ numColumnsModes = length(columnsModes);
 numBounds = length(collector.options.EdgesPred);
 
 modeCounter = 1;
-boundariesAffected = 1:5; N = length(boundariesAffected);
 
 %for numModes = 1:2
 % if numModes > 1, copy the shape numModes times
 for numModes = 1
 	% coordinates
 	interval = floor((numColumnsModes-1)/numModes);
-	height = (diff(minMaxColumns)+1)/numModes/2;
-%	modeShape = cos(linspace(-pi/2,pi/2,interval+1))*height;
-	modeShape = [linspace(1,1.5,interval+1)*height; linspace(1.5,1.5,interval+1)*height; linspace(1.5,1,interval+1)*height];
-	
-	for i = 1:numModes
-		for j = 1:size(modeShape,1)
-			newMode = zeros(1,sizeWML); % initial zero mode
-			columnsMode = columnsModes((1:(interval+1)) + (i-1)*interval); % determine column indices that correspond to mode 
+	if length(strfind(collector.options.folder_data,'2015_BOE_Chiu')) % DME Dataset
+		boundariesAffected{1} = 1:5;
+		boundariesAffected{2} = 4:5;
+		if max(columnsPred > 300)
+			boundariesAffected{3} = 1;
+			boundariesAffected{4} = 2;
+		end
+		height = 20;
+		modeShape{1} = [linspace(1,1.5,interval+1)*height; linspace(1.5,1.5,interval+1)*height; linspace(1.5,1,interval+1)*height]; % cysts between layers 5 and 6
+		modeShape{2} = [linspace(1,1.5,interval+1)*height/5; linspace(1.5,1.5,interval+1)*height/5; linspace(1.5,1,interval+1)*height/5]; % cysts between layers 3 and 4
+		if max(columnsPred > 300) % swelling only occures at nasal region
+			modeShape{3} = [linspace(1,1.5,interval+1)*height/10; linspace(1.5,1.5,interval+1)*height/10;]; % increased RNFL for DME
+			modeShape{4} = -[linspace(1,1.5,interval+1)*height/10; linspace(1.5,1.5,interval+1)*height/10;]; % increased RNFL for DME
+		end
+		modeType = [1 1 1 1];
+	elseif length(strfind(collector.options.folder_data,'drusendaten')) || length(strfind(collector.options.folder_data,'Chiu_IOVS_2011')) % AMD Dataset
+		boundariesAffected{1} = 6:9;
+		boundariesAffected{2} = 6; % GA 
+		boundariesAffected{3} = 7; % GA 
+		height = (diff(minMaxColumns)+1)/numModes/2;
+		modeShape{1} = cos(linspace(-pi/2,pi/2,interval+1))*height;
+		modeShape{2} = [linspace(1,1.5,interval+1)*4; linspace(1.5,1.5,interval+1)*4; linspace(1.5,1,interval+1)*4]; % cysts between layers 5 and 6
+%		modeShape{3} = [linspace(1,1.5,interval+1)*4; linspace(1.5,1.5,interval+1)*4; linspace(1.5,1,interval+1)*4]; % cysts between layers 5 and 6
+%		modeShape{2} = [linspace(1.5,1.5,interval+1)*height/5];
+		I1 = round((interval+1)/3); I2 = interval+1-I1;
+%		modeShape{2} = [[linspace(1,0,I1)*height/10 linspace(0,0,I2)*height/5]; [linspace(0,0,I2)*height/10 linspace(0,1,I1)*height/10]]; % cysts between layers 3 and 4
+%		modeShape{3} = cos(linspace(-pi/2,pi/2,interval+1))*height;
+%		modeShape{1} = [cos(linspace(-pi/2,pi/2,interval+1))*height; cos(linspace(-pi/2,pi/2,interval+1))*height; cos(linspace(-pi/2,pi/2,interval+1))*height-5; cos(linspace(-pi/2,pi/2,interval+1))*height-5];
+		modeType = [1 1 1];
+	elseif length(strfind(collector.options.folder_data,'glaukom')) % Glaukom dataset
+		boundariesAffected{1} = 1;
+%		boundariesAffected{2} = 2:4;
+%		boundariesAffected{3} = 2:4;
+%		boundariesAffected{2} = 2;
+		boundariesAffected{2} = 3;
+		boundariesAffected{3} = 4;
+%		boundariesAffected{5} = 5;
+		height = 4;
+		modeShape{1} = [linspace(1.5,1.5,interval+1)*height]; % cysts between layers 5 and 6
+		modeShape{2} = [linspace(1.5,1.5,interval+1)*height/4]; % cysts between layers 5 and 6
+		modeShape{3} = [linspace(1.5,1.5,interval+1)*height/4]; % cysts between layers 5 and 6
+%		modeShape{4} = [linspace(1.5,1.5,interval+1)*height/2]; % cysts between layers 5 and 6
+%		modeShape{5} = [linspace(1.5,1.5,interval+1)*height/2]; % cysts between layers 5 and 6
+%		modeShape{1} = [linspace(1,1.5,interval+1)*height; linspace(1.5,1.5,interval+1)*height; linspace(1.5,1,interval+1)*height]; % cysts between layers 5 and 6
+%		modeShape{2} = [linspace(3,3,interval+1)*height/4; linspace(2,2,interval+1)*height/4; linspace(1,1,interval+1)*height/4]; % cysts between layers 5 and 6
+%		modeShape{2} = [linspace(2,2,interval+1)*height/4; linspace(2,2,interval+1)*height/4; linspace(2,2,interval+1)*height/4]; % cysts between layers 5 and 6
+		modeType = [1 1 1 1 1];
+	else
+		error('Dataset not detected --> no modes added');
+	end
 
-			% add basic shape to all boundaries, determined by boundariesAffected
-			columnsToAdd = repmat(columnsMode,N,1) + repmat((boundariesAffected-1)'*sizeWML/numBounds,1,interval+1);
+	for k = 1:length(modeShape)
+		for i = 1:numModes
+			N = length(boundariesAffected{k});
+			if modeType(k)
+				for j = 1:size(modeShape{k},1)
+					newMode = zeros(sizeWML,1); % initial zero mode
+					columnsMode = columnsModes((1:(interval+1)) + (i-1)*interval); % determine column indices that correspond to mode 
 
-			newMode(columnsToAdd) = repmat(modeShape(j,:),N,1);
-			% add to cell array of modes
-			newModes{modeCounter} = newMode; 
-			modeCounter = modeCounter+1;
+					% add the shape in modeShape to *each* boundaries in boundariesAffected: 1/2 a/b ==> 1: a/b, 2: a/b
+					columnsToAdd = repmat(columnsMode,N,1) + repmat((boundariesAffected{k}-1)'*sizeWML/numBounds,1,interval+1);
+					newMode(columnsToAdd) = repmat(modeShape{k}(j,:),N,1);
+					% add to cell array of modes
+					newModes(:,modeCounter) = newMode;
+					modeCounter = modeCounter+1;
+				end
+			else
+			    newMode = zeros(sizeWML,1); % initial zero mode
+				columnsMode = columnsModes((1:(interval+1)) + (i-1)*interval); % determine column indices that correspond to mode 
+
+				% add the shape in modeShape to *all* boundaries in boundariesAffected: 1/2 a/b ==> 1: a, 2: b 
+				columnsToAdd = repmat(columnsMode,N,1) + repmat((boundariesAffected{k}-1)'*sizeWML/numBounds,1,interval+1);
+				newMode(columnsToAdd) = modeShape{k};
+				% add to cell array of modes
+				newModes(:,modeCounter) = newMode;
+				modeCounter = modeCounter+1;
+			end
 		end
 	end
 end
@@ -55,4 +115,3 @@ end
 %end
 
 end
-

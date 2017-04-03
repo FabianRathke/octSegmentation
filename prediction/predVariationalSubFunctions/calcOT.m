@@ -13,15 +13,22 @@ end
 %end
 %mu_a_b = eval(sprintf('%s(mu_a_b)',collector.options.dataTypeCast));
 
+% x was calculated in optQB
+% mu_a_b is the mean of the second gaussian when calculating the expectation of p(b|c) with respect to q(b);
+% covers terms p(b_{k,j}|b_{\setminus j})
 productB = sigmaML^-1*x - sigmaML^-1*WML(idx_b,:)*(prodWMT(:,idx_b)*x) - K_jj_block(idx_b,idx_b)*x;
-mu_a_b = zeros(numColumns*numBounds,1);
+mu_a_b = zeros(numColumnsShape*numBounds,1);
 mu_a_b(idx_b) = models.shapeModel.mu(idx_b) - K_jj_inverse_block(idx_b,idx_b)*productB;
 
-tmp = X - mu_a_b(:,ones(1,numRows));
-condQB = repmat(1./sqrt(2*pi*sigma_tilde_squared),numRows,1).*exp((-0.5)*tmp.*tmp./sigma_tilde_squared(ones(1,numRows),:)')';
+%[condQB cmin cmax] = calcCondQB(mu_a_b,sigma_tilde_squared,numRows,numBounds,numColumnsShape,options.thresholdAccuracy);
+[condQB cmin cmax] = calcCondQB(mu_a_b,sigma_tilde_squared,numRows,numBounds,numColumnsShape,numColumnsPred,int32(columnsPredShapeVec(1,:)-1),columnsPredShapeFactorVec(1,:),int32(columnsPredShapeVec(2,:)-1),columnsPredShapeFactorVec(2,:),options.thresholdAccuracy);
+
+%tmp = X - mu_a_b(:,ones(1,numRows));
+% evaluate 1-d gaussian for all columns
+%condQB = repmat(1./sqrt(2*pi*sigma_tilde_squared),numRows,1).*exp((-0.5)*tmp.*tmp./sigma_tilde_squared(ones(1,numRows),:)')';
 %condQB = (1./sqrt(2*pi*sigma_tilde_squared(ones(1,numRows),:)').*exp((-0.5)*((X - mu_a_b(:,ones(1,numRows)))).^2./sigma_tilde_squared(ones(1,numRows),:)'))';
 % implicit cast to single precision
-condQB(condQB < options.thresholdAccuracy) = 0;
+%condQB(condQB < options.thresholdAccuracy) = 0;
 
 if collector.options.printTimings
    	if collector.options.calcOnGPU

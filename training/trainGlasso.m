@@ -9,7 +9,7 @@ function model = trainGlasso(trainData,ids,params,options)
 %
 % Inputs:
 %   trainData - [matrix](numPatches,dimData) patch information from the training set for one class
-%   ids - [array] a vector of classIDs for which appearance models will be created; classID set in collectTrnData
+%   ids - [array] a vector of classIDs indicating texture and bondary classes
 %   params - [struct] 
 %      .glasso - [float] controls the sparsity of the precision matrix, bigger values correspond to sparser matrices
 %   options - [struct] options struct

@@ -72,7 +72,7 @@ else
 		[V D] = eig(Sigma{j}); % eigendecomposition of the covariance matrix 
 		D = diag(D);
 		% estimate for sigma^2 is the average of the disregarded eigenvalues
-		sigmaML= 1/(length(D)-options.numModes)*sum(D(1:end-options.numModes));
+		sigmaML = 1/(length(D)-options.numModes)*sum(D(1:end-options.numModes));
 		% select modes accoding to the options.numModes highest eigenvalues
 		WML = V(:,end:-1:end-options.numModes+1)*sqrt(diag(D(end:-1:end-options.numModes+1)) - eye(options.numModes)*sigmaML);
 		% add parameters to the model struct

@@ -1,4 +1,5 @@
-function matrix = getCondTransMatrix(mu,Prec,numRows);
+function matrix = getCondTransMatrix(mu,Prec,numRows,doTriu);
+
 % getCondTransMatrix(mu,Prec,numRows,options) - evaluates the distribution p(a|b) at discrete positions 1:numRows 
 %
 % Syntax:
@@ -26,8 +27,12 @@ mu_a_b = mu(2) - Prec(2,2)^-1*Prec(2,1)*(positions-mu(1));
 A = positions;
 factor = 1/(2*pi*inv(Prec(2,2)))^0.5;
 n = length(positions);
-tmp = (reshape(A(ones(1,n),:)',1,n^2) - reshape(mu_a_b(ones(1,n),:),1,n^2));
-matrix = triu(factor*reshape(exp(-0.5*Prec(2,2)*(tmp.*tmp)),n,n)',0);
+tmp = reshape(bsxfun(@minus,A',mu_a_b),1,n^2);
+if nargin > 3 & ~doTriu
+	matrix = factor*reshape(exp(-0.5*Prec(2,2)*(tmp.*tmp)),n,n)';
+else
+	matrix = triu(factor*reshape(exp(-0.5*Prec(2,2)*(tmp.*tmp)),n,n)',0);
+end
 
 % introduce sparsity
-matrix(matrix<(10^-12)) = 0;
+matrix(matrix<(10^-20)) = 0;

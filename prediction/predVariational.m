@@ -34,6 +34,8 @@ function output = predVariational(files,collector,params,models,options)
 % Website: https://github.com/FabianRathke/octSegmentation
 % Last Revision: 05-May-2014
 
+global predictionGlobal;
+
 if collector.options.printTimings
 	initSegTic = tic;
 end
@@ -45,10 +47,18 @@ end
 if length(files) > 1
 	error('Debug: Prediction currently only works for one file');
 end
+NaNDetected = 0;
 
+if options.calcFuncVal
+	try
+		%margins = load([getenv('OCT_CODE_DIR') '/datafiles/healthyMargins3D']);
+	catch
+		%warning('/datafiles/healthyMargins3D does not exist --> no detection of badly initialized A-scans.');
+	end
+end
 
 for file = 1:length(files)
-	fprintf('... make predictions for ** %s **\n',files(file).name);
+	%fprintf('... make predictions for ** %s **\n',files(file).name);
 	
 	if options.plotting
 		% check folder to store plots for current file
@@ -58,28 +68,23 @@ for file = 1:length(files)
 	boundaries = zeros(numVolRegions,numBounds,numColumnsPred);
 
 	% the pairwise terms of q_c are only needed, when calculating the mutual information
-	if options.calcFuncVal
-		q_c.pairwise = cell(numVolRegions,numColumnsPred,numBounds-1);
-		for region = 1:numVolRegions
-			for j = 1:numColumnsPred
-				for k = 1:numBounds-1
-					q_c.pairwise{region,j,k} = sparse(numRows,numRows);
-				end
-			end
-		end
-	end
+%	if options.calcFuncVal
+%		q_c.pairwise = cell(numVolRegions,numColumnsPred,numBounds-1);
+%		for region = 1:numVolRegions
+%			for j = 1:numColumnsPred
+%				for k = 1:numBounds-1
+%					q_c.pairwise{region,j,k} = sparse(numRows,numRows);
+%				end
+%			end
+%		end
+%	end
 
-	if ~isfield(options,'q_c_singleton')
-		q_c.singleton = zeros(numRows,numBounds,numColumnsPred,numVolRegions);
-%		[q_c output] = initQC(files(file),collector,models,options,q_c);
-		initQC;
-	else
-		q_c.singleton = options.q_c_singleton;
-	end
+	q_c.singleton = zeros(numRows,numBounds,numColumnsPred,numVolRegions);
+	initQC;
 
 	error_init = 0;
 	for volRegion = 1:collector.options.numRegionsPerVolume
-		q_c_plot = squeeze(sum(q_c.singleton(:,:,:,volRegion).*repmat((1:numRows)',[1,numBounds,numColumnsPred])));
+		q_c_plot = squeeze(sum(bsxfun(@times,q_c.singleton,[1:numRows]'),1)); 
 
 		old_boundaries(volRegion,:,:) = q_c_plot;
 		output.prediction_init{file,volRegion} = q_c_plot;
@@ -111,10 +116,15 @@ for file = 1:length(files)
 	end
 
 	% calculates the constant contributions of the shape prior to the omega-matrices
-	calcShapeTerms;
+	if isfield(options,'windows')
+		calcShapeTermsWindowed;
+	else
+		calcShapeTerms;
+	end
+
 	unsigned_error = [];
 	for iter = 1:options.iterations
-		fprintf('Iteration %d\n',iter);
+		%fprintf('Iteration %d\n',iter);
 		% save last iterations prediction for convergence criteria
 		if iter > 1
 			old_boundaries = boundaries;
@@ -122,42 +132,53 @@ for file = 1:length(files)
 			boundaries = old_boundaries;
 		end
 
-		% optimize q_b
-		optQB;
-		% intializes omega matrices 
-		calcOT;
+		if isfield(options,'windows')
+			optQBWindowed
+			calcOTWindowed
+		else
+			% optimize q_b
+			optQB;
+			% intializes omega matrices 
+			calcOT;
+		end
 		% optimize q_c
 		optQC;
 
 		change_per_iteration(iter) = 0;
-		for volRegion = 1:numVolRegions
-			boundaries(volRegion,:,:) = squeeze(sum(q_c.singleton(:,:,:,volRegion).*repmat((1:numRows)',[1,numBounds,numColumnsPred])));
+%		for volRegion = 1:numVolRegions
+%			for k = 1:numBounds
+%				boundaries(volRegion,k,:) = squeeze(q_c.singleton(:,k,:))'*(1:numRows)';
+%			end
          	change_per_iteration(iter) =  change_per_iteration(iter) + mean(mean(mean(abs(boundaries(volRegion,:,columnsShapePred{volRegion})-old_boundaries(volRegion,:,columnsShapePred{volRegion})))));
-		end
+%		end
+
+		% check for NaNs
 		if sum(isnan(boundaries(:)))
 			fprintf('NaN detected, aborting prediction\n');
-			return
-		end	
-		fprintf('Mean change: %.3fpx\n',change_per_iteration(iter));
-		
-		for volRegion = 1:numVolRegions
-			if collector.options.loadLabels
-				if options.detailedOutput  
-					idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
-					q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
-					q_c_error(iter,volRegion,:) = sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+			iter = options.iterations;
+			NaNDetected = 1;
+		else	
+			%fprintf('Mean change: %.3fpx\n',change_per_iteration(iter));
+			
+			for volRegion = 1:numVolRegions
+				if collector.options.loadLabels
+					if options.detailedOutput  
+						idx = (1:numBounds*numColumnsShape(volRegion)) + numBounds*sum(numColumnsShape(1:volRegion-1));
+						q_b_error(iter,volRegion,:) = sum(abs(single(reshape(q_b.mu(idx),numColumnsShape(volRegion),numBounds)) - output.trueLabels{file,volRegion}(:,collector.options.columnsShape{volRegion})'))/numColumnsShape(volRegion);
+						q_c_error(iter,volRegion,:) = sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred)),2)/numColumnsPred;
+					end
+					unsigned_error(iter,volRegion) = sum(sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds);
 				end
-				unsigned_error(iter,volRegion) = sum(sum(abs(squeeze(boundaries(volRegion,:,:)) - output.trueLabels{file,volRegion}(:,collector.options.columnsPred))))/(numColumnsPred*numBounds); 	
 			end
-
-		end
-		if collector.options.loadLabels
-			fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));
+			if collector.options.loadLabels
+				fprintf('Unsigned error: %.3fpx\n',mean(unsigned_error(iter,:)));
+			end
 		end
 
 		% after convergence, save the final result and quit the optimization
 		if (iter == options.iterations || (iter > 1 && change_per_iteration(iter) < options.threshold))
 			output.columnsPred = collector.options.columnsPred;
+			output.columnsShapePred = columnsShapePred;
 			output.q_c_singleton = q_c.singleton;
 			output.q_b{file} = reshape(q_b.mu,numColumnsShape(volRegion),[])';
 			output.z{file} = z;
@@ -174,13 +195,15 @@ for file = 1:length(files)
 				output.q_b{file} = q_b.mu;
 			end
 			% calc the terms of the objective function
-			if options.calcFuncVal
+			if options.calcFuncVal & ~NaNDetected
 				calcFuncVals;
 				output.funcVal(file) = funcVal;
+			elseif options.calcFuncVal & NaNDetected
+				output.funcVal(file).q_c_data = ones(1,numColumnsPred,numBounds)*inf;
 			end
 
 			% clean after mex-functions
-			clear mex
+		%	clear mex
 			
 			if options.plotting
 				fprintf('All plots written to %s\n',folderName);

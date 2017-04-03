@@ -1,27 +1,29 @@
 tic;
 
 % calculate parameters of a Gaussian density, that is the product of two Gaussian densities (3.2.11 and 3.2.12 in the thesis)
-% 
-Sigma_c = zeros(1,numColumnsShape*(numBounds-1));
-Sigma_c(idxB-numColumnsShape) = 1./(factorsPrecAVec(idxB-numColumnsShape) + 1./sigma_tilde_squared(idxB));
-%Sigma_c = eval(sprintf('%s(Sigma_c)',collector.options.dataTypeCast));
+% naming convention due to matrix cookbook (371) 
+%Sigma_c = zeros(1,numColumnsShape*(numBounds-1));
+%Sigma_c(idxB-numColumnsShape) = 1./(factorsPrecAVec(idxB-numColumnsShape) + 1./sigma_tilde_squared(idxB));
 
-mu_c = zeros(numRows,numColumnsShape*(numBounds-1));
-mu_c(:,idxB-numColumnsShape) = repmat(Sigma_c(idxB-numColumnsShape).*(1./sigma_tilde_squared(idxB).*mu_a_b(idxB)'),numRows,1) + repmat(Sigma_c(idxB-numColumnsShape).*factorsPrecAVec(idxB-numColumnsShape),numRows,1).*mu_a_b2(idxB-numColumnsShape,:)';
-%mu_c = eval(sprintf('%s(mu_c)',collector.options.dataTypeCast));
+%mu_c = zeros(numRows,numColumnsShape*(numBounds-1));
+%mu_c(:,idxB-numColumnsShape) = repmat(Sigma_c(idxB-numColumnsShape).*(1./sigma_tilde_squared(idxB).*mu_a_b(idxB)'),numRows,1) + repmat(Sigma_c(idxB-numColumnsShape).*factorsPrecAVec(idxB-numColumnsShape),numRows,1).*mu_a_b2(idxB-numColumnsShape,:)';
 
 %c_c = (1./sqrt(2*pi*(factorsPrecAVec(ones(1,numRows),:).^-1) + sigma_tilde_squared(ones(1,numRows),idxB))'.*exp(-0.5*(mu_a_b2 - mu_a_b(idxB,ones(1,numRows))).^2.*(factorsPrecAVec(ones(1,numRows),:)'.^-1 + sigma_tilde_squared(ones(1,numRows),idxB)').^-1))';
-tmp = 1./(1./factorsPrecAVec(idxB-numColumnsShape) + sigma_tilde_squared(idxB));
-tmp2 = (mu_a_b2(idxB-numColumnsShape,:) - mu_a_b(idxB,ones(1,numRows)))';
-c_c = zeros(numRows,numColumnsShape*(numBounds-1));
-c_c(:,idxB-numColumnsShape) = repmat(sqrt(tmp)/sqrt(2*pi),numRows,1).*exp(-0.5*tmp2.*tmp2.*repmat(tmp,numRows,1));
-c_c(c_c < options.thresholdAccuracy) = 0;
-%c_c = eval(sprintf('%s(c_c)',collector.options.dataTypeCast));
+%tmp = 1./(1./factorsPrecAVec(idxB-numColumnsShape) + sigma_tilde_squared(idxB));
+%tmp2 = (mu_a_b2(idxB-numColumnsShape,:) - mu_a_b(idxB,ones(1,numRows)))';
+%c_c = zeros(numRows,numColumnsShape*(numBounds-1));
+%c_c(:,idxB-numColumnsShape) = repmat(sqrt(tmp)/sqrt(2*pi),numRows,1).*exp(-0.5*tmp2.*tmp2.*repmat(tmp,numRows,1));
+%c_c(c_c < options.thresholdAccuracy) = 0;
 
 if ~isfield(options,'doNotPredict')
 	% call the c-function in case we need not to calculate pairwise marginals
 	timeCFunc = 0;
-	a = tic; q_cc = optQCC(double(condQB),prediction,double(Sigma_c.^-1),double(mu_c),double(c_c),double(mu_a_b2'),numColumnsPred,numColumnsShape,columnsPredShapeVec(1,:),columnsPredShapeFactorVec(1,:),columnsPredShapeVec(2,:),columnsPredShapeFactorVec(2,:),double(factorsPrecAVec),hashTable); 
+	% old slower version of the C-code
+	%a = tic; q_cc = optQCC(double(condQB),prediction,double(Sigma_c.^-1),double(mu_c),double(c_c),double(mu_a_b2'),numColumnsPred,numColumnsShape,columnsPredShapeVec(1,:),columnsPredShapeFactorVec(1,:),columnsPredShapeVec(2,:),columnsPredShapeFactorVec(2,:),double(factorsPrecAVec),hashTable); 
+%	a = tic; [q_cc boundaries] = optQCCFaster(double(condQB),prediction,double(mu_a_b2),numColumnsPred,numColumnsShape,int32(columnsPredShapeVec(1,:)),columnsPredShapeFactorVec(1,:),int32(columnsPredShapeVec(2,:)),columnsPredShapeFactorVec(2,:),double(factorsPrecAVec),hashTable,cmin,cmax);
+%	a = tic; [q_cc boundaries] = optQCCAvgVals(double(condQB),prediction,double(mu_a_b2),double(factorsPrecAvg),hashTable,numColumnsPred,cmin,cmax); 
+	a = tic; [q_cc boundaries] = optQCC(condQB,prediction,mu_a_b2,factorsPrecAvg,hashTable,numColumnsPred,cmin,cmax); 
+	boundaries = permute(boundaries,[3 1 2]);
 	q_c.singleton = reshape(q_cc,[numRows,numBounds,numColumnsPred,numVolRegions]);
 	timeCFunc = toc(a);
 else

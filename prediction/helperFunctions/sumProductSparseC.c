@@ -25,15 +25,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 
 	/* only calculate pairiwse probabilities up to this precision */
-	double eps = pow(10,-20);
+	double eps = pow(10,-25);
 	double* gamma = NULL;
 	/* return the probabilities for this B-Scan column */
-	plhs[0] = mxCreateDoubleMatrix(1,numColumns*numBounds*numRows,mxREAL);
+	int dimArray[3] = {numRows,numBounds,numColumns};
+	plhs[0] = mxCreateNumericArray(3,dimArray,mxDOUBLE_CLASS,mxREAL);
 	gamma = mxGetPr(plhs[0]);
-
 	#pragma omp parallel
 	{	
-		double var_a_b, factor, mu_a, mu_b, prec_a_b, prec_a_a, prec_b_b, evalDens, aTilde;
+		double var_a_b, factor, mu_a, mu_b, prec_a_b, prec_a_a, evalDens, aTilde;
 		double variance, varInv;
 		double* prec = malloc(2*(numBounds-1)*sizeof(double));
 		double var1, var2, var3;
@@ -51,6 +51,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		double mu_b_a, mu_a_b, tmpVal, prec_a_aaTilde;
 		#pragma omp for	
 		for (column=0; column < numColumns; column++) {
+/*		for (column = 0; column < 1; column++) {*/
 			rowStart = boundsPred[column*2]; rowEnd = boundsPred[column*2+1];
 			memset(alpha,0,numRows*numBounds*sizeof(double));
 			memset(beta,0,numRows*numBounds*sizeof(double));
@@ -64,7 +65,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			
 			variance += sigmaML; varInv = -0.5/variance;
 			factor = 1/sqrt(2*3.1415926535897*variance);
-
 			cTmp = 0;
 			for (i=rowStart; i < rowEnd+1; i++) {
 				alpha[i] = factor*exp(varInv*(i+1 - mu[idxA[column]])*(i+1-mu[idxA[column]]))*prediction[i + predOffset];

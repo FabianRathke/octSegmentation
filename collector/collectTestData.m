@@ -29,7 +29,7 @@ function testData = collectTestData(file,options)
 % Last Revision: 02-May-2014
 
 pw = ([options.height options.width]-1)/2;
-[a filename] = fileparts(file.name);
+%[a filename] = fileparts(file.name);
 
 % determines which columns and which rows to fetch from the B-scan
 if isfield(options,'idxSet')
@@ -37,11 +37,11 @@ if isfield(options,'idxSet')
 	idxSet(1,:) = idxSet(1,:) + pw(1); 
 	idxSet(2,:) = idxSet(2,:) + pw(2);
 else
-	[a b] = meshgrid(options.columnsPred+pw(2),1+pw(1):options.Y+pw(1));
+	[a b] = meshgrid(int32(options.columnsPred+pw(2)),int32(1+pw(1):options.Y+pw(1)));
 	idxSet = [reshape(b,1,options.Y*length(options.columnsPred)); reshape(a,1,options.Y*length(options.columnsPred))];
 end
-testData = fetchPatches(filename,idxSet,options);
-testData.idx = int16(idxSet' - pw(ones(1,size(idxSet,2)),:));
+testData = fetchPatches(file.name,idxSet,options);
+testData.idx = int16(idxSet') - int16(pw(ones(1,size(idxSet,2)),:));
 
 % set class to boundary classes where transitions between layers occur (change of index)
 %numBounds = length(options.EdgesPred); numLayers = length(options.LayersPred);

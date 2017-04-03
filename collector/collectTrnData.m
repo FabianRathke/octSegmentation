@@ -38,7 +38,8 @@ numClasses = length(options.LayersTrain) + length(options.EdgesTrain);
 numPatches = options.numPatches*length(files)*numClasses;
 
 for region = 1:size(options.BScanRegions,1)
-	trnData(region).data = zeros(numPatches,options.height*options.width);
+%	trnData(region).data = zeros(numPatches,options.height*options.width*options.depth);
+	trnData(region).data = [];
 	trnData(region).classID = zeros(1,numPatches,'int8');
 	trnData(region).type = zeros(1,numClasses,'int8');
 	trnData(region).idx = zeros(numPatches,2,'int16');
@@ -93,7 +94,6 @@ for i = 1:length(files)
 			end
 		end
 
-		random = randperm(size(Classes,2));
 		% draw patches representing edges
 		if length(options.EdgesTrain) > 0 
 			for j = 1:length(options.EdgesTrain);
@@ -120,12 +120,13 @@ for i = 1:length(files)
 		
 		% transfer indices from B0 to B0Aug
 		idxRand = idxRand + repmat([pw(1); pw(2)],1,numPatchesToAdd);
-		patches = fetchPatches(filename,idxRand,options);
+		patches = fetchPatches(filename,int32(idxRand),options);
 
-		classIDs =  reshape(repmat([options.LayersTrain (1:length(options.EdgesTrain)) + options.numLayers],options.numPatches,1),1,options.numPatches*numClasses);
+		classIDs = reshape(repmat([options.LayersTrain (1:length(options.EdgesTrain)) + options.numLayers],options.numPatches,1),1,options.numPatches*numClasses);
 		classIDs(setToZero) = [];
 		trnData(region).classID(idxSave) = classIDs; 
-		trnData(region).data(idxSave,:) = patches.data;
+%		trnData(region).data(idxSave,:) = patches.data;
+		trnData(region).data = [trnData(region).data; patches.data];
 	end
 end
 

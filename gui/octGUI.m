@@ -168,9 +168,7 @@ function loadGT()
 		[pathstr,name,ext] = fileparts(fileNameScan);
 		files = dir([pathNameGT filesep name '*']);
 		if length(files) > 0
-			if options.verbose > 0
-				fprintf('Loading external ground truth found in GT folder');
-			end
+			fprintf('Loading external ground truth found in GT folder');
 
 			for i = 1:length(files)
 				interpolation = load([pathNameGT filesep files(i).name],'interpolation');
@@ -325,7 +323,7 @@ function printFigure_Callback(hObject,eventdata)
 	hfig = figure;
 	hax_new = copyobj(axisBScan, hfig);
 	set(gca, 'Units', 'normalized', 'Position', [.1 .1 .85 .8]);
-	set(get(gca,'Parent'),'Position',[200 50 860 600]);
+	set(get(gca,'Parent'),'Position',[200 50 700 600]);
     set(gcf, 'PaperPositionMode', 'auto');
 	set(gca,'YTickLabels','');
 	set(gca,'XTickLabels','');
@@ -334,7 +332,7 @@ function printFigure_Callback(hObject,eventdata)
 
 	print(hfig,['plots/figure_' num2str(plotCounter) '.eps'],'-depsc2');
 	plotCounter = plotCounter + 1;
-	close(hfig);
+%	close(hfig);
 end
 
 function showQB_Callback(hObject,eventdata)
@@ -414,6 +412,7 @@ function pred = startSegmentation(collectorAdd,optionsAdd,toSegment)
 
 	collector.options.loadRoutineData = ['spectralis' upper(fileExt(2)) fileExt(3:4)];
 	testFunc.name = @predVariational; testFunc.options = struct('calcFuncVal',1,'alpha',str2num(get(setAlpha,'String')),'variance',str2num(get(setVariance,'String')));
+	testFunc.options.appearanceModel = model.options.appearanceModel;
 
 	% scan format, which has double resolution in y-dimension
 	if fileHeader.SizeX == 1536
@@ -480,7 +479,7 @@ function displayAppearance()
 	app = zeros(size(BScanData{currentBScan}));
 	app(:,columnsToPlot) = reshape(predictions{currentBScan}.appearance{1}(currentAppLayer,:),fileHeader.SizeZ,[]);
 	% normalize the maximum of each column to one
-	%app(:,columnsToPlot) = app(:,columnsToPlot)./repmat(max(app(:,columnsToPlot)),fileHeader.SizeZ,1);
+	app(:,columnsToPlot) = app(:,columnsToPlot)./repmat(max(app(:,columnsToPlot)),fileHeader.SizeZ,1);
 	% interpolate columns
 	columnsToInterpolate = setdiff(columnsToPlot(1):columnsToPlot(end),columnsToPlot);
 
@@ -561,7 +560,7 @@ function loadModel_Callback(hObject,eventdata)
 			updateStatus('Invalid model file.');
 			return
 		end
-
+		model.appearanceModel{1}
 		tBScan = printDataInTable(tab3,model.params);
 		tBScan.Position(3) = tBScan.Extent(3); tBScan.Position(4) = tBScan.Extent(4);           
 		if length(fieldnames(model)) > 0

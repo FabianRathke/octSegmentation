@@ -1,4 +1,4 @@
-% calc $A^j_k = (K_{jj}^-1*K_{j,\setminus{j}})_{k,*}$
+% calc $A^j_k = (K_{jj}^-1*K_{j,\setminus{j}}p)_{k,*}$
 if collector.options.printTimings
 	ticCalcShape = tic;
 end
@@ -9,7 +9,7 @@ idx_diag = 1:numBounds+1:numBounds^2;
 
 idxI = zeros(1,numColumnsShapeTotal*numBounds^2);
 idxJ = zeros(1,numColumnsShapeTotal*numBounds^2);
-s = zeros(1,numColumnsShapeTotal*numBounds^2);
+s1 = zeros(1,numColumnsShapeTotal*numBounds^2); s2 = zeros(1,numColumnsShapeTotal*numBounds^2); s3 = zeros(1,numColumnsShapeTotal*numBounds^2);
 idx_all = 1:numColumnsShapeTotal*numBounds;
 
 % naive implementation for each image column
@@ -25,26 +25,22 @@ for volRegion = 1:numVolRegions
 		countJ = sum(numColumnsShape(1:volRegion-1)) + j; 
 		idxRange = (countJ-1)*numBounds^2 + 1:countJ*numBounds^2;
 		[idxI(idxRange) idxJ(idxRange)] = meshgrid(idx_j); 
-		s(idxRange) = K_jj_inverse(:);
+		s1(idxRange) = K_jj_inverse(:);
 		s3(idxRange) = tmp(:);	
 
 		% calculating A_k^j: note that we do not need the sigma^-2I part, since we pull a part of K that does not include the diagonal
-		if collector.options.calcOnGPU
-%			A_k(idx_j,idx_not_j) = GPUsingle(K_jj_inverse{volRegion,j})*-sigmaML^-1*WML(idx_j,:)*M*WML(idx_not_j,:)';
-		else
-			s2(idxRange) = reshape(K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_j),1,[]);
-			% DEBUG: CALC A_K
-%			idx_not_j = idx_all; idx_not_j(idx_j) = [];
-%			A_k(idx_j,idx_not_j) = K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_not_j);
-		end
+		s2(idxRange) = reshape(K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_j),1,[]);
+		% DEBUG: CALC A_K
+%		idx_not_j = idx_all; idx_not_j(idx_j) = [];
+%		A_k(idx_j,idx_not_j) = K_jj_inverse*-sigmaML^-1*WML(idx_j,:)*prodWMT(:,idx_not_j);
 	end
 end
 % cast to different data type if required
 sigma_tilde_squared = eval(sprintf('%s(sigma_tilde_squared);',collector.options.dataTypeCast));
-K_jj_inverse_block = sparse(idxI,idxJ,s);
+
+K_jj_inverse_block = sparse(idxI,idxJ,s1);
 K_jj_block = sparse(idxI,idxJ,s3);
 A_k_nonzero = sparse(idxI,idxJ,s2);
-
 A_k_partial = -sigmaML^-1*K_jj_inverse_block*WML*M;
 
 % DEBUG CALC \tilde{P}

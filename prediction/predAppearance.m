@@ -31,12 +31,12 @@ function output = predAppearance(files,collector,models,options)
 % Author: Fabian Rathke
 % email: frathke@googlemail.com
 % Website: https://github.com/FabianRathke/octSegmentation
-% Last Revision: 10-Dec-2013
+% Last Revision: 24-Nov-2016
 
 % defaults are defined in local function, see below
 options = setDefaults(options);
 
-numClasses = size(models{1},3);
+numClasses = collector.options.numLayers*2-1;
 
 output.prediction = cell(length(files),collector.options.numRegionsPerVolume);
 output.trueLabels = cell(length(files),collector.options.numRegionsPerVolume);
@@ -46,7 +46,10 @@ tic;
 for i = 1:length(files)
 	for regionVolume = 1:collector.options.numRegionsPerVolume
 		% initialize results with the suitable data type; for GPU or CPU computations
-		eval(sprintf('results = zeros(numClasses,length(collector.options.columnsPred)*collector.options.Y,%s);',collector.options.dataType));
+		results = zeros(numClasses,length(collector.options.columnsPred)*collector.options.Y);
+		if length(models) > 1
+			resultsFirstModel = zeros(numClasses,length(collector.options.columnsPred)*collector.options.Y);
+		end
 		mixturePrior = ones(1,length(models))/length(models);
 		% mixture of appearance models
 		for model = 1:length(models)
@@ -70,20 +73,38 @@ for i = 1:length(files)
 			% iterate over regions within the current B-scan
 			for regionBScan = 1:collector.options.numRegionsPerBScan
 				% select the subset of patches beloning to the current region
-				idxSet = patches.idx(:,2) >= collector.options.BScanRegions(regionBScan,1) & patches.idx(:,2)<=collector.options.BScanRegions(regionBScan,2);
-				if sum(idxSet) > 0
-					% fetch the current set of patches
-					patchesCurrRegion = double(patches.data(idxSet,:));
-					
-					% pre-processing on patch-level (for preprocessing on scan-level see loadData.m)
-					for i = 1:length(collector.options.preprocessing.patchLevel)
-						patchesCurrRegion = optionsApp.preprocessing.patchLevel{i}{1}(patchesCurrRegion,optionsApp.preprocessing.patchLevel{i},models{model}(regionVolume,regionBScan,:));
+				idxSet = find(patches.idx(:,2) >= collector.options.BScanRegions(regionBScan,1) & patches.idx(:,2)<=collector.options.BScanRegions(regionBScan,2));
+				if length(idxSet) > 0
+					if (length(idxSet)*size(patches.data,2)*4/1024^3 > 1); nSplits = 10; else; nSplits = 1; end;
+					for j = 1:nSplits
+						idxSub = (1:length(idxSet)/nSplits) + (j-1)*length(idxSet)/nSplits;
+						% fetch the current set of patches
+						patchesCurrRegion = double(patches.data(idxSet(idxSub),:));
+						
+						% pre-processing on patch-level (for preprocessing on scan-level see loadData.m)
+						for l = 1:length(collector.options.preprocessing.patchLevel)
+							if  (size(optionsApp.preprocessing.patchLevel{l},1) == 1)
+								patchesCurrRegion = optionsApp.preprocessing.patchLevel{l}{1}(patchesCurrRegion,optionsApp.preprocessing.patchLevel{l},models{model}(regionVolume,regionBScan,:));
+							elseif (size(optionsApp.preprocessing.patchLevel{l},1) == collector.options.numRegionsPerBScan)
+								 patchesCurrRegion = optionsApp.preprocessing.patchLevel{l}{l}{1}(patchesCurrRegion,optionsApp.preprocessing.patchLevel{l}{l},models{model}(regionVolume,regionBScan,:));
+							else
+								error(sprintf('Wrong number of options for preprosessing: %s\n',optionsApp.preprocessing.patchLevel{l}{1}));
+							end
+						end
+				
+						% predict appearance terms
+						tmp = exp(options.predAppearance(patchesCurrRegion,models{model}(regionVolume,regionBScan,:)));
+						results(:,idxSet(idxSub)) = results(:,idxSet(idxSub)) + mixturePrior(model)*tmp;
+						if length(models) > 1 && model == 1
+							resultsFirstModel(:,idxSet(idxSub)) = tmp;
+						end
 					end
-			
-					% predict appearance terms
-					results(:,idxSet) = results(:,idxSet) + mixturePrior(model)*exp(options.predAppearance(patchesCurrRegion,models{model}(regionVolume,regionBScan,:)));
 				end
 			end
+		end
+		output.predictionNonNormalized = double((results));
+		if length(models) > 1 
+			output.predictionFirstModel = double(resultsFirstModel./repmat(sum(resultsFirstModel),numClasses,1));
 		end
 		% post-processing (disciminative/generative, logarithmic/exponential output)
 		if options.normalizeDataTerm
