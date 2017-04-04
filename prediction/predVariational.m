@@ -36,6 +36,7 @@ function output = predVariational(files,collector,params,models,options)
 
 global predictionGlobal;
 
+collector.options.printTimings = 0;
 if collector.options.printTimings
 	initSegTic = tic;
 end

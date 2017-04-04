@@ -23,8 +23,8 @@ for i = 1:length(names)
 end
 
 % some standard variables
-%numVolRegions = collector.options.numRegionsPerVolume;r
-numVolRegions = length(collector.options.labelIDs);
+%numVolRegions = length(collector.options.labelIDs);
+numVolRegions = 1;
 % quick hack --> change for final version: check which model components are required and modify the model to fit these requirements;
 % better --> just save an array of model indices and leave the model itself untouched
 modelsTmp.appearanceModel = cell(size(models.appearanceModel));

@@ -32,14 +32,14 @@ if nargin < 3
 		W = options{3};
 		mu = options{4};
 	end
-	data.data = (data.data-repmat(mu,size(data.data,1),1))*W;
+	data.data = bsxfun(@minus,data.data,mu)*W;
 	
 	dataReturn = data.data;
 	modelsToAppend.W = W;
 	modelsToAppend.mu = mu;
 % prediction
 else
- 	dataReturn = (data - models(1).mu(ones(1,size(data,1)),:))*models(1).W;
+ 	dataReturn = bsxfun(@minus,data,models(1).mu)*models(1).W;
 	modelsToAppend = [];
 end
 

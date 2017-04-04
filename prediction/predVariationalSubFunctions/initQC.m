@@ -184,9 +184,9 @@ if strcmp(collector.options.loadRoutineData,'Srinivasan')
 	idxSet = find(arrayfun(@(x) length(x{1}),D.PixelIdxList) > 1000);
 	for jConn = 1:length(idxSet)
 		for kk = 1:numBounds
-			predictionTmp = squeeze(prediction(:,k,:));
+			predictionTmp = squeeze(prediction(:,kk,:));
 			predictionTmp(D.PixelIdxList{idxSet(jConn)}) = 10^-200;
-			prediction(:,k,:) = predictionTmp;
+			prediction(:,kk,:) = predictionTmp;
 		end
 	end
 end

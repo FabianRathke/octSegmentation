@@ -129,6 +129,14 @@ elseif strcmp(options.loadRoutineData,'Srinivasan')
 	else
 		B0 = single(imread([options.folder_data filename sprintf('/TIFFs/8bitTIFFs/%03.0f.tif',options.labelID)]))/255;
 	end
+	numCols = size(B0,2);
+  	if numCols == 1024
+    	options.clipFactor = 2;
+        options.clipRange = [round((numCols-1000)/2)*ones(1,2) + [1 1000]];
+    else
+    	options.clipFactor = 1;
+        options.clipRange = [round((numCols-500)/2)*ones(1,2) + [1 500]];
+    end
 
 	s = regexp(filename,'(\d{1,2})','tokens');
 	filenumber = str2num(s{1}{1});
