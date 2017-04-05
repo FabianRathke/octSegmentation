@@ -44,11 +44,11 @@ for numModes = 1
 		modeType = [1 1 1 1];
 	elseif length(strfind(collector.options.folder_data,'drusendaten')) || length(strfind(collector.options.folder_data,'Chiu_IOVS_2011')) || strcmp(collector.options.modeType,'AMD')  % AMD Dataset
 		boundariesAffected{1} = 6:9;
-		boundariesAffected{2} = 6; % GA 
-		boundariesAffected{3} = 7; % GA 
+%		boundariesAffected{2} = 6; % GA 
+%		boundariesAffected{3} = 7; % GA 
 		height = (diff(minMaxColumns)+1)/numModes/2;
 		modeShape{1} = cos(linspace(-pi/2,pi/2,interval+1))*height;
-		modeShape{2} = [linspace(1,1.5,interval+1)*4; linspace(1.5,1.5,interval+1)*4; linspace(1.5,1,interval+1)*4]; % cysts between layers 5 and 6
+%		modeShape{2} = [linspace(1,1.5,interval+1)*4; linspace(1.5,1.5,interval+1)*4; linspace(1.5,1,interval+1)*4]; % cysts between layers 5 and 6
 %		modeShape{3} = [linspace(1,1.5,interval+1)*4; linspace(1.5,1.5,interval+1)*4; linspace(1.5,1,interval+1)*4]; % cysts between layers 5 and 6
 %		modeShape{2} = [linspace(1.5,1.5,interval+1)*height/5];
 		I1 = round((interval+1)/3); I2 = interval+1-I1;
