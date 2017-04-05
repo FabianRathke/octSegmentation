@@ -27,7 +27,7 @@ modeCounter = 1;
 for numModes = 1
 	% coordinates
 	interval = floor((numColumnsModes-1)/numModes);
-	if length(strfind(collector.options.folder_data,'2015_BOE_Chiu')) % DME Dataset
+	if length(strfind(collector.options.folder_data,'2015_BOE_Chiu')) || strcmp(collector.options.modeType,'DME') % DME Dataset
 		boundariesAffected{1} = 1:5;
 		boundariesAffected{2} = 4:5;
 		if max(columnsPred > 300)
@@ -42,7 +42,7 @@ for numModes = 1
 			modeShape{4} = -[linspace(1,1.5,interval+1)*height/10; linspace(1.5,1.5,interval+1)*height/10;]; % increased RNFL for DME
 		end
 		modeType = [1 1 1 1];
-	elseif length(strfind(collector.options.folder_data,'drusendaten')) || length(strfind(collector.options.folder_data,'Chiu_IOVS_2011')) % AMD Dataset
+	elseif length(strfind(collector.options.folder_data,'drusendaten')) || length(strfind(collector.options.folder_data,'Chiu_IOVS_2011')) || strcmp(collector.options.modeType,'AMD')  % AMD Dataset
 		boundariesAffected{1} = 6:9;
 		boundariesAffected{2} = 6; % GA 
 		boundariesAffected{3} = 7; % GA 

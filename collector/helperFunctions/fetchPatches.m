@@ -36,7 +36,7 @@ if options.Patches3D
 		B0{j} = loadData(filename,options);
 	end
 else
-	if isStoredInGlobal & isfield(predictionGlobal,'BScans') & ~isempty(predictionGlobal.BScans{options.labelID})
+	if isStoredInGlobal.data & isfield(predictionGlobal,'BScans') & ~isempty(predictionGlobal.BScans{options.labelID})
 		B0{1} = predictionGlobal.BScans{options.labelID};
 	else
 		B0{1} = loadData(filename,options);

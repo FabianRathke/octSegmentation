@@ -5,7 +5,7 @@ boundsPred = [ones(numColumnsShape,1) ones(numColumnsShape,1)*numRows]';
 boundsPredAll = [ones(numColumnsPred,1) ones(numColumnsPred,1)*numRows]';
 % Calculate appearance terms
 % Use globally stored pre-calculated appearance terms
-if isStoredInGlobal
+if isStoredInGlobal.prediction
 	% check if all columns that are to be predicted are contained in the globally saved prediction
 	if sum(~ismember(collector.options.columnsPred,predictionGlobal.columns{collector.options.labelIDs(file,volRegion)})) == 0
 		fprintf('Reusing appearance terms stored in global variable\n');
@@ -25,12 +25,12 @@ if isStoredInGlobal
 		end
 	else
 		fprintf('Reusing of appearance terms failed, calculating them anew! (Information is not stored for all image columns).\n');
-		isStoredInGlobal = 0;
+		isStoredInGlobal.prediction = 0;
 	end
 % No global variable: Calculate them
 else
 	fprintf('No cached appearance terms found, calculating them\n');
-	if ~isfield(options,'appearance') && ~isStoredInGlobal
+	if ~isfield(options,'appearance') && ~isStoredInGlobal.prediction
 		% use prediction on a subset of columns to restrict the area that has to be taken into consideration
 		if length(collector.options.columnsPred) > 100 && isfield(collector.options,'margins') && 0
 			volRegion = 1;
@@ -209,7 +209,7 @@ end
 %end
 
 % saves the appearance terms in a global variable --> can be reused in subsequent runs and requires less user interaction 
-if collector.options.makePredGlobal && ~isStoredInGlobal %isempty(predictionGlobal.data{collector.options.labelIDs(file,volRegion)})
+if collector.options.makePredGlobal && ~isStoredInGlobal.prediction %isempty(predictionGlobal.data{collector.options.labelIDs(file,volRegion)})
 	fprintf('Store appearance terms in global variable\n');
 	predictionGlobal.data{collector.options.labelIDs(file,volRegion)} = prediction;
 	predictionGlobal.columns{collector.options.labelIDs(file,volRegion)} = collector.options.columnsPred;
