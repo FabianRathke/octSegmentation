@@ -1,5 +1,9 @@
 function checkPredictionGlobal(filename,labelID)
 
+if nargin < 2
+	error('Not enough input arguments provided');
+end
+
 global predictionGlobal
 global isStoredInGlobal;
 isStoredInGlobal.prediction = 0;
@@ -14,19 +18,16 @@ if ~isempty(predictionGlobal)
 			global predictionGlobal;
 		else
 			if isfield(predictionGlobal,'BScans') & ~isempty(predictionGlobal.BScans{labelID})
-				isStoredInGlobal.data = 0
+				isStoredInGlobal.data = 1
 			end
-
-			if nargin > 1
-				if isfield(predictionGlobal,'data') 
-					if length(predictionGlobal.data) < labelID
-						isStoredInGlobal.prediction = 0;
-					elseif ~isempty(predictionGlobal.data{labelID})
-						isStoredInGlobal.prediction = 1;
-					end
-				else
+			if isfield(predictionGlobal,'data') 
+				if length(predictionGlobal.data) < labelID
 					isStoredInGlobal.prediction = 0;
+				elseif ~isempty(predictionGlobal.data{labelID})
+					isStoredInGlobal.prediction = 1;
 				end
+			else
+				isStoredInGlobal.prediction = 0;
 			end
 		end
 	end
